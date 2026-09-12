@@ -24,3 +24,16 @@ class MatchedScheme(BaseModel):
     rationale: str
     key_conditions: List[str]
     official_portal_url: Optional[str] = None
+
+
+class SchemeItem(BaseModel):
+    id: Optional[str] = None
+    scheme_code: str
+    official_name: str
+    authority: str
+    max_loan_limit: Optional[float] = None
+    max_subsidy_pct: Optional[float] = 0.0
+    official_portal_url: Optional[str] = None
+    eligibility_rules: dict = Field(default_factory=dict)
+    is_active: bool = True
+
