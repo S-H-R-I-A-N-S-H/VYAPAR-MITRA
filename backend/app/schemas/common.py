@@ -18,7 +18,14 @@ class PaginationParams(BaseModel):
     page_size: int = Field(default=20, ge=1, le=100)
 
 
+class DatabaseHealth(BaseModel):
+    status: str = Field(..., description="Status: connected, disconnected, or unconfigured")
+    latency_ms: Optional[float] = Field(default=None, description="Roundtrip latency in milliseconds")
+    error: Optional[str] = Field(default=None, description="Sanitized error message if disconnected")
+
+
 class HealthStatus(BaseModel):
     status: str = "ok"
     version: str = "1.0.0"
     environment: str = "development"
+    database: DatabaseHealth = Field(default_factory=lambda: DatabaseHealth(status="unconfigured"))
