@@ -11,7 +11,7 @@ intentionally deferred.
 
 ### Product name
 
-**SIH 26091 --- AI-Powered Business Advisory Assistant**
+**VYAPAR MITRA --- Full-Lifecycle Evidence-Based Advisory & Smart Financing for Rural Micro-Entrepreneurs**
 
 ### One-sentence definition
 
