@@ -29,6 +29,29 @@ class BusinessResponse(BusinessCreate):
     updated_at: datetime
 
 
+class BusinessUpdate(BaseModel):
+    name: Optional[str] = None
+    status: Optional[str] = None
+    domain: Optional[str] = None
+    product_or_service: Optional[str] = None
+    business_model: Optional[str] = None
+    description: Optional[str] = None
+    target_customer: Optional[str] = None
+    intended_market: Optional[str] = None
+    scale: Optional[str] = None
+
+
+class BusinessVersionResponse(BaseModel):
+    id: str
+    business_id: str
+    version_number: int
+    business_definition: str
+    assumptions: dict
+    source: str
+    created_at: datetime
+    confirmed_at: Optional[datetime] = None
+
+
 class BusinessOpportunityItem(BaseModel):
     title: str
     domain: str

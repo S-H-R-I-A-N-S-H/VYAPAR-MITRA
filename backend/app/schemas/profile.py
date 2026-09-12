@@ -43,6 +43,18 @@ class EntrepreneurProfileResponse(BaseModel):
     skills: List[str]
     interests: List[str]
     risk_preference: str
-    scheme_category: str
+    scheme_category: Optional[str] = "general"
     created_at: datetime
     updated_at: datetime
+
+
+class EntrepreneurProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    preferred_language: Optional[str] = None
+    voice_enabled: Optional[bool] = None
+    available_capital: Optional[float] = Field(default=None, ge=0)
+    skills: Optional[List[str]] = None
+    interests: Optional[List[str]] = None
+    risk_preference: Optional[str] = None
+    scheme_category: Optional[str] = None
+    location_id: Optional[str] = None

@@ -13,7 +13,7 @@ async def list_schemes():
     """
     Returns active government schemes catalog available in the database.
     """
-    client = supabase_adapter.client
+    client = supabase_adapter.admin_client or supabase_adapter.client
     if not client:
         return APIResponse(
             success=True,
