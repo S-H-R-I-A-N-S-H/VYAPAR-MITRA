@@ -42,3 +42,18 @@ class ForbiddenOperationException(VyaparMitraException):
             detail=detail,
             error_code="FORBIDDEN",
         )
+
+
+class AIProviderException(VyaparMitraException):
+    def __init__(
+        self,
+        detail: str = "AI reasoning service error.",
+        error_code: str = "AI_PROVIDER_ERROR",
+        extra: Optional[Any] = None,
+    ):
+        super().__init__(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=detail,
+            error_code=error_code,
+            extra=extra,
+        )
