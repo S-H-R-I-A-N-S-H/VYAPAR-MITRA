@@ -63,6 +63,8 @@ __pycache__/
 backend/.venv/
 backend/venv/
 backend/env/
+.venv/
+venv/
 ENV/
 .pytest_cache/
 .coverage
