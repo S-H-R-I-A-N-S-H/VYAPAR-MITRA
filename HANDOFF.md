@@ -17,7 +17,6 @@
 6. [Security, Authentication & Environment Configuration](#6-security-authentication--environment-configuration)
 7. [The Teammate Compass: Completed, Working, Missing & Next Steps](#7-the-teammate-compass-completed-working-missing--next-steps)
    - [7.1 What All We Did Till Now](#71-what-all-we-did-till-now)
-   - [7.2 What Is Working Today (Verifiable Flows)](#72-what-is-working-today-verifiable-flows)
    - [7.3 What Is Missing / Mocked (The Major Remaining Chunk)](#73-what-is-missing--mocked-the-major-remaining-chunk)
    - [7.4 Teammate Action Plan & Next Sprints](#74-teammate-action-plan--next-sprints)
 8. [Troubleshooting & Gotchas Cheatsheet](#8-troubleshooting--gotchas-cheatsheet)
@@ -436,20 +435,6 @@ We have established the complete architectural backbone, deterministic domain en
 
 ---
 
-### 7.2 What Is Working Today (Verifiable Flows)
-
-The following capabilities are **functional and testable right now**:
-
-| Feature / Subsystem | Current Working State | How to Verify |
-| :--- | :--- | :--- |
-| **Financial Feasibility Engine** | **100% Functional & Deterministic.** Accurately calculates loan EMI, break-even timeline, working capital buffer, and DSCR. | Run `pytest tests/unit/test_financial_engine.py` or use `POST /api/v1/finance/simulate` in Swagger. |
-| **Government Scheme Matcher** | **100% Functional & Deterministic.** Evaluates PMEGP, MUDRA tiers, and SVANidhi eligibility based on caste/gender consent and capital size. | Run `pytest tests/unit/test_scheme_matcher.py` or call `POST /api/v1/schemes/match`. |
-| **Evidence Conflict Detector** | **100% Functional.** Compares secondary estimates with ground survey entries, flags variance $> 20\%$, and computes confidence scores. | Run `pytest tests/unit/test_conflict_detector.py` or test via `POST /api/v1/research/projects/{id}/conflicts`. |
-| **Development In-Memory Storage** | **100% Functional.** Endpoints support local in-memory fallback dictionaries (`_OFFLINE_*`), enabling full CRUD operations without a live Supabase instance. | Create research projects and finance scenarios via Swagger; verify they retrieve successfully. |
-| **Flutter UI Flow & Routing** | **100% Navigable.** Teammates can navigate from Welcome $\to$ Language $\to$ Profile $\to$ Interview $\to$ Opportunities $\to$ Validation $\to$ Finance $\to$ Action Plan. | Run `flutter run` on Android or Chrome; click through the onboarding and analysis screens. |
-| **Automated Testing Suite** | **100% Passing.** 100% of unit and API integration tests pass cleanly out-of-the-box. | Run `pytest -v` in `backend/`. |
-
----
 
 ### 7.3 What Is Missing / Mocked (The Major Remaining Chunk)
 
