@@ -169,6 +169,10 @@ class SelectedBusinessNotifier extends StateNotifier<SelectedBusinessState> {
     state = business;
   }
 
+  void setBusinessId(String id) {
+    state = state.copyWith(businessId: id);
+  }
+
   void setStatus(String newStatus) {
     state = state.copyWith(status: newStatus);
   }

@@ -457,6 +457,25 @@ We have established the complete architectural backbone, deterministic domain en
    - Extracted server-assigned entrepreneur profile UUID (`data.id`) from the HTTP 201 response and stored it into Riverpod via `businessProfileProvider.notifier.setProfileId(profileId)`.
    - Removed silent error swallowing: added error SnackBar feedback (`Failed to save profile: $e`), preserving user inputs on error and preventing unintended screen transition.
    - Added automated integration tests in [test/features/profile_integration_test.dart](file:///c:/VM/test/features/profile_integration_test.dart) (3/3 passing), bringing the Flutter test suite to 22/22 passing.
+9. **Phase 3: Business Creation & Real `business_id` Propagation (Complete & Verified):**
+   - Implemented real business creation from the Mobile Business Confirmation Checkpoint (`BusinessConfirmationScreen`).
+   - Replaced static/local-only status transition with live API call to `POST /api/v1/businesses` using centralized [ApiEndpoints.businesses](file:///c:/VM/lib/core/network/api_endpoints.dart).
+   - Formed outbound payload conforming strictly to backend `BusinessCreate` schema:
+     - `name`: `business.title`
+     - `domain`: `business.domain`
+     - `product_or_service`: `business.title`
+     - `business_model`: `'Direct retail & local haat distribution'`
+     - `description`: `'${business.title} located in ${profile.block}, ${profile.district}'`
+     - `target_customer`: localized customer description
+     - `intended_market`: `'${profile.block} Block, ${profile.district} (~10 km radius)'`
+     - `scale`: `'micro'`
+   - Leveraged authenticated `apiClientProvider` transmitting active Bearer token (`mock-user-dev-001` in development).
+   - Verified profile dependency: verifies `profile.profileId` exists from Phase 2; halts and alerts user if profile is missing.
+   - On HTTP 201 Created response, extracted server-assigned business UUID (`res['data']['id']`) and persisted it into Riverpod via `selectedBusinessProvider.notifier.setBusinessId(serverBusinessId)`.
+   - Built duplicate prevention: checks if `business.businessId` is already set before making network call, preventing duplicate creation upon screen re-entry.
+   - Robust error handling: displays error SnackBar and stays on screen without updating state or navigating on failure.
+   - Automated tests: created [test/features/business_creation_integration_test.dart](file:///c:/VM/test/features/business_creation_integration_test.dart) (5/5 passing). Full Flutter test suite expanded to 27/27 passing.
+   - Real backend verification performed against live port 8000: verified `OPTIONS /businesses` → 200, `POST /profile` → 201 (`profileId: 3507cde8-320d-46b5-9122-2256a2dba260`), and `POST /businesses` → 201 (`business_id: eb7050a5-e245-4dd4-8bba-8307ce78c27c` with `entrepreneur_id` correctly referencing `profileId`).
 
 ### 7.2 Integration Phase Status Summary
 
@@ -464,9 +483,9 @@ We have established the complete architectural backbone, deterministic domain en
 |---|---|---|---|
 | **Task 1 Backend** | Profile → Business Foundation (`user_id` → `profile_id` → `business_id`) | **COMPLETE (Frozen)** | Backend pytest suite passes; committed on branch `financial-calculator` |
 | **Phase 1** | Frontend Auth & Token Propagation (`authProvider` → `apiClientProvider`) | **COMPLETE** | 7 automated tests pass (`test/core/auth_integration_test.dart`); HTTP 401 resolved |
-| **Phase 2** | Profile Contract Alignment & State Persistence (`EntrepreneurProfileCreate` → `setProfileId`) | **COMPLETE** | 3 integration tests pass (`test/features/profile_integration_test.dart`); all 22 Flutter tests pass; HTTP 422 resolved |
-| **Phase 3** | Business Creation & Real `business_id` Propagation | **NOT STARTED** | Next to execute |
-| **Phase 4** | Financial Engine & Scenario Integration | **NOT STARTED** | To execute after Phase 3 |
+| **Phase 2** | Profile Contract Alignment & State Persistence (`EntrepreneurProfileCreate` → `setProfileId`) | **COMPLETE** | 3 integration tests pass (`test/features/profile_integration_test.dart`); HTTP 422 resolved |
+| **Phase 3** | Business Creation & Real `business_id` Propagation | **COMPLETE** | 5 integration tests pass (`test/features/business_creation_integration_test.dart`); all 27 Flutter tests pass; live backend verified (OPTIONS 200, POST 201) |
+| **Phase 4** | Financial Engine & Scenario Integration | **NOT STARTED** | Next to execute |
 
 ---
 

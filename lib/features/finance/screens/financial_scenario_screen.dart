@@ -6,6 +6,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/tactile_card.dart';
 import '../../../shared/widgets/vyapar_top_app_bar.dart';
+import '../providers/financial_provider.dart';
 
 /// Screen 9: Financial Scenario & What-If Modeler
 /// Stitch Reference: Screen 31db70f160de4454a00d35f8e7437f4f
@@ -19,31 +20,48 @@ class FinancialScenarioScreen extends ConsumerStatefulWidget {
 
 class _FinancialScenarioScreenState
     extends ConsumerState<FinancialScenarioScreen> {
-  double _capacityPercentage = 100.0; // 60% to 100%
-  final double _baseRevenue = 62000.0;
-  final double _baseOperatingCosts = 33500.0;
-  final double _emi = 3100.0;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final apiClient = ref.read(apiClientProvider);
+      final business = ref.read(selectedBusinessProvider);
+      final profile = ref.read(businessProfileProvider);
 
-  double get _currentRevenue => _baseRevenue * (_capacityPercentage / 100.0);
-  double get _currentOperatingCosts =>
-      _baseOperatingCosts * (0.3 + 0.7 * (_capacityPercentage / 100.0));
-  double get _netCashInHand =>
-      _currentRevenue - _currentOperatingCosts - _emi;
+      ref.read(financialProvider.notifier).calculateBaseScenario(
+            apiClient: apiClient,
+            business: business,
+            profile: profile,
+          );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final isHindi = ref.watch(localeProvider).languageCode == 'hi';
-    final business = ref.watch(selectedBusinessProvider);
-    final profile = ref.watch(businessProfileProvider);
+    final financeState = ref.watch(financialProvider);
+    final sim = financeState.simulation;
 
-    final netCash = _netCashInHand;
-    final isHealthy = netCash >= 15000;
+    final capacityPercentage = financeState.capacityPercentage;
+    final currentRevenue = financeState.currentRevenue;
+    final currentOperatingCosts = financeState.currentOperatingCosts;
+    final emi = sim.monthlyEmi;
+    final netCash = financeState.netCashInHand;
+    final isHealthy = financeState.isHealthy;
+    final rationaleText = financeState.displayRationale;
+
+    final selfPercent = sim.totalProjectCost > 0
+        ? ((sim.ownCapital / sim.totalProjectCost) * 100).round()
+        : 33;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: VyaparTopAppBar(
         title: isHindi ? 'वित्तीय योजना व लाभ' : 'Financial Planning',
-        subtitle: isHindi ? 'मासिक नकदी प्रवाह व तनाव परीक्षण' : 'Monthly Cash Flow & What-If',
+        subtitle: isHindi
+            ? 'मासिक नकदी प्रवाह व तनाव परीक्षण'
+            : 'Monthly Cash Flow & What-If',
         showAudioButton: true,
       ),
       body: SafeArea(
@@ -95,7 +113,7 @@ class _FinancialScenarioScreenState
                           style: AppTypography.bodyMedium,
                         ),
                         Text(
-                          '₹${(business.estimatedCapital).toStringAsFixed(0)}',
+                          '₹${(sim.totalProjectCost).toStringAsFixed(0)}',
                           style: AppTypography.headlineLarge.copyWith(
                             fontWeight: FontWeight.w800,
                             color: AppColors.primary,
@@ -128,13 +146,13 @@ class _FinancialScenarioScreenState
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  '₹${(profile.personalCapital).toStringAsFixed(0)}',
+                                  '₹${(sim.ownCapital).toStringAsFixed(0)}',
                                   style: AppTypography.labelLarge.copyWith(
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 Text(
-                                  'Self funds (33%)',
+                                  'Self funds ($selfPercent%)',
                                   style: AppTypography.labelSmall.copyWith(
                                     color: AppColors.textMuted,
                                     fontSize: 10,
@@ -164,7 +182,7 @@ class _FinancialScenarioScreenState
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  '₹${(business.estimatedCapital - profile.personalCapital).toStringAsFixed(0)}',
+                                  '₹${(sim.requiredLoanAmount).toStringAsFixed(0)}',
                                   style: AppTypography.labelLarge.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: AppColors.primary,
@@ -213,7 +231,7 @@ class _FinancialScenarioScreenState
                                 ],
                               ),
                               Text(
-                                '₹${_emi.toStringAsFixed(0)} / mo',
+                                '₹${emi.toStringAsFixed(0)} / mo',
                                 style: AppTypography.headlineSmall.copyWith(
                                   color: AppColors.secondary,
                                   fontWeight: FontWeight.bold,
@@ -276,19 +294,19 @@ class _FinancialScenarioScreenState
                     const SizedBox(height: 12),
                     _buildCashFlowRow(
                       isHindi ? 'मासिक बिक्री राजस्व' : 'Monthly Sales Revenue',
-                      '+₹${_currentRevenue.toStringAsFixed(0)}',
+                      '+₹${currentRevenue.toStringAsFixed(0)}',
                       isPositive: true,
                     ),
                     const Divider(height: 16, color: AppColors.border),
                     _buildCashFlowRow(
                       isHindi ? 'मासिक संचालन लागत (कच्चा माल व बिजली)' : 'Monthly Operating Costs',
-                      '-₹${_currentOperatingCosts.toStringAsFixed(0)}',
+                      '-₹${currentOperatingCosts.toStringAsFixed(0)}',
                       isPositive: false,
                     ),
                     const Divider(height: 16, color: AppColors.border),
                     _buildCashFlowRow(
                       isHindi ? 'बैंक ऋण किस्त (EMI)' : 'Bank Loan EMI',
-                      '-₹${_emi.toStringAsFixed(0)}',
+                      '-₹${emi.toStringAsFixed(0)}',
                       isPositive: false,
                     ),
                     const SizedBox(height: 14),
@@ -317,7 +335,11 @@ class _FinancialScenarioScreenState
                                 ),
                               ),
                               Text(
-                                isHealthy ? 'Surplus Safe' : 'Tight Margin',
+                                isHealthy
+                                    ? 'Surplus Safe'
+                                    : (financeState.activeRiskLevel == 'critical'
+                                        ? 'Critical Risk'
+                                        : 'Tight Margin'),
                                 style: AppTypography.labelSmall.copyWith(
                                   color: isHealthy ? AppColors.success : AppColors.warning,
                                   fontWeight: FontWeight.bold,
@@ -336,9 +358,11 @@ class _FinancialScenarioScreenState
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            isHindi
-                                ? '6 से 8 महीने में पूंजी वापसी (Payback Period)'
-                                : '6 to 8 months capital payback period',
+                            rationaleText.isNotEmpty
+                                ? rationaleText
+                                : (isHindi
+                                    ? '6 से 8 महीने में पूंजी वापसी (Payback Period)'
+                                    : '6 to 8 months capital payback period'),
                             style: AppTypography.bodySmall.copyWith(
                               color: isHealthy ? AppColors.success : AppColors.warning,
                               fontWeight: FontWeight.w600,
@@ -385,11 +409,11 @@ class _FinancialScenarioScreenState
                     // Quick Scenario Buttons
                     Row(
                       children: [
-                        _buildScenarioChip('100% Normal', 100.0),
+                        _buildScenarioChip('100% Normal', 100.0, capacityPercentage),
                         const SizedBox(width: 8),
-                        _buildScenarioChip('-20% Slow', 80.0),
+                        _buildScenarioChip('-20% Slow', 80.0, capacityPercentage),
                         const SizedBox(width: 8),
-                        _buildScenarioChip('-40% Tough', 60.0),
+                        _buildScenarioChip('-40% Tough', 60.0, capacityPercentage),
                       ],
                     ),
 
@@ -397,14 +421,18 @@ class _FinancialScenarioScreenState
 
                     // Slider
                     Slider(
-                      value: _capacityPercentage,
+                      value: capacityPercentage,
                       min: 60.0,
                       max: 100.0,
                       divisions: 8,
-                      label: '${_capacityPercentage.toInt()}%',
+                      label: '${capacityPercentage.toInt()}%',
                       activeColor: isHealthy ? AppColors.primary : AppColors.warning,
                       onChanged: (val) {
-                        setState(() => _capacityPercentage = val);
+                        final apiClient = ref.read(apiClientProvider);
+                        ref.read(financialProvider.notifier).updateCapacity(
+                              apiClient: apiClient,
+                              capacityPercentage: val,
+                            );
                       },
                     ),
 
@@ -412,7 +440,7 @@ class _FinancialScenarioScreenState
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('60% Off-season', style: AppTypography.labelSmall),
-                        Text('${_capacityPercentage.toInt()}% Capacity',
+                        Text('${capacityPercentage.toInt()}% Capacity',
                             style: AppTypography.labelSmall.copyWith(
                               fontWeight: FontWeight.bold,
                               color: AppColors.primary,
@@ -468,11 +496,17 @@ class _FinancialScenarioScreenState
     );
   }
 
-  Widget _buildScenarioChip(String title, double percentage) {
-    final isSelected = (_capacityPercentage - percentage).abs() < 1.0;
+  Widget _buildScenarioChip(String title, double percentage, double activePercentage) {
+    final isSelected = (activePercentage - percentage).abs() < 1.0;
     return Expanded(
       child: InkWell(
-        onTap: () => setState(() => _capacityPercentage = percentage),
+        onTap: () {
+          final apiClient = ref.read(apiClientProvider);
+          ref.read(financialProvider.notifier).updateCapacity(
+                apiClient: apiClient,
+                capacityPercentage: percentage,
+              );
+        },
         borderRadius: BorderRadius.circular(10),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),

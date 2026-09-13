@@ -19,6 +19,27 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
 
       final mockHttp = MockClient((request) async {
+        if (request.url.path.endsWith('/businesses')) {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'id': 'biz-e2e-created-001',
+                'entrepreneur_id': 'ent-e2e-profile-001',
+                'name': 'Cold-Press Mustard Oil Mill',
+                'status': 'IDEA',
+                'domain': 'Agri-Processing & Food Products',
+                'product_or_service': 'Cold-Press Mustard Oil Mill',
+                'scale': 'micro',
+                'created_at': DateTime.now().toIso8601String(),
+                'updated_at': DateTime.now().toIso8601String(),
+              },
+              'message': 'Business idea created successfully.',
+            }),
+            201,
+          );
+        }
+
         return http.Response(
           jsonEncode({
             'success': true,
