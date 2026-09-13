@@ -75,3 +75,6 @@ htmlcov/
 # Supabase local artifacts
 .supabase/
 
+# Kotlin compiler sessions & cache
+.kotlin/
+android/.kotlin/
