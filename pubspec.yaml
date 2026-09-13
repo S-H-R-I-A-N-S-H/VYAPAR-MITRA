@@ -56,8 +56,8 @@ dependencies:
   # Networking
   http: ^1.2.0
 
-  # Ecosystem Plugins (Requested by user)
-  mappls_gl: ^2.0.6
+  # Ecosystem Plugins (Uncomment when license keys / credentials are provided)
+  # mappls_gl: ^2.0.6 # Requires MapmyIndia .a.olf offline license file in Android assets
   bhashini_plugin: ^1.0.0
   flutter_ai_toolkit: ^1.0.0
 
