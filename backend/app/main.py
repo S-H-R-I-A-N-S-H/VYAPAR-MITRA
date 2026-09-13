@@ -1,3 +1,11 @@
+import sys
+from pathlib import Path
+
+# Ensure backend package directory is in python search path
+_backend_dir = str(Path(__file__).resolve().parent.parent)
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
+
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
