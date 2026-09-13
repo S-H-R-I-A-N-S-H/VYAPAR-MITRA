@@ -248,6 +248,8 @@ class _ResearchProgressScreenState extends ConsumerState<ResearchProgressScreen>
                       isDone: true,
                       title: isHindi ? 'स्थानीय प्रतियोगी' : 'Local Competitors Mapped',
                       subtitle: '2 expeller mills operating within 7 km',
+                      onTap: () => Navigator.pushNamed(context, '/competitor-map'),
+                      actionLabel: isHindi ? 'मानचित्र 📍' : 'View Map 📍',
                     ),
                     _buildPipelineStep(
                       isDone: _completedSteps >= 3,
@@ -299,6 +301,8 @@ class _ResearchProgressScreenState extends ConsumerState<ResearchProgressScreen>
     required String title,
     required String subtitle,
     bool isLast = false,
+    VoidCallback? onTap,
+    String? actionLabel,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -332,12 +336,40 @@ class _ResearchProgressScreenState extends ConsumerState<ResearchProgressScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: AppTypography.labelMedium.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  if (onTap != null && actionLabel != null)
+                    GestureDetector(
+                      onTap: onTap,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                              color: AppColors.secondary.withValues(alpha: 0.3)),
+                        ),
+                        child: Text(
+                          actionLabel,
+                          style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.secondary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
               Text(
                 subtitle,

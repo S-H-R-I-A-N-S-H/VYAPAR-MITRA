@@ -31,10 +31,20 @@ class ApiEndpoints {
   static String get locations => '$baseUrl/locations';
   static String get profile => '$baseUrl/profile';
 
-  // Conversational Interview
+  // Conversational Interview & Bhashini Voice
   static String get interviews => '$baseUrl/interviews';
   static String interviewMessages(String id) => '$baseUrl/interviews/$id/messages';
+  static String interviewVoice(String id) => '$baseUrl/interviews/$id/voice';
   static String interviewComplete(String id) => '$baseUrl/interviews/$id/complete';
+
+  // Bhashini Speech Services
+  static String get speechTranscribe => '$baseUrl/speech/transcribe';
+  static String get speechSynthesize => '$baseUrl/speech/synthesize';
+  static String get speechTranslate => '$baseUrl/speech/translate';
+
+  // Locality & Mappls Geospatial Intelligence
+  static String get localityCompetitors => '$baseUrl/locality/competitors';
+  static String discoverProjectCompetitors(String id) => '$baseUrl/research/projects/$id/discover-competitors';
 
   // Opportunities & Business
   static String get discoverOpportunities => '$baseUrl/opportunities/discover';

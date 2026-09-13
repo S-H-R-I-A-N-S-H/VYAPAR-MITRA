@@ -4,6 +4,7 @@ import uuid
 from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, status
 
+from app.adapters.mappls_adapter import MapplsAdapter
 from app.adapters.supabase_adapter import supabase_adapter
 from app.core.errors import ResourceNotFoundException, VyaparMitraException
 from app.core.security import get_current_user
@@ -19,6 +20,7 @@ from app.schemas.profile import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+mappls_adapter = MapplsAdapter()
 
 # In-memory store fallback for offline test isolation or sandbox environments
 _OFFLINE_PROFILES: Dict[str, Dict[str, Any]] = {}
@@ -358,3 +360,54 @@ async def get_location(
         )
 
     raise ResourceNotFoundException("Location", location_id)
+
+
+@router.get(
+    "/locality/competitors",
+    summary="Discover nearby registered business competitors via Mappls",
+)
+async def get_nearby_competitors(
+    category: str,
+    query: Optional[str] = None,
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None,
+    radius_km: float = 5.0,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    lat = latitude
+    lon = longitude
+    loc_meta = {}
+
+    if lat is None or lon is None:
+        search_query = query or "Baramati, Pune"
+        geo_results = await mappls_adapter.geocode(search_query)
+        if geo_results:
+            lat = geo_results[0]["latitude"]
+            lon = geo_results[0]["longitude"]
+            loc_meta = geo_results[0]
+        else:
+            lat = 18.5204
+            lon = 73.8567
+            loc_meta = {"village": search_query, "latitude": lat, "longitude": lon}
+    else:
+        loc_meta = {"latitude": lat, "longitude": lon}
+
+    competitors = await mappls_adapter.find_nearby_competitors(
+        latitude=lat,
+        longitude=lon,
+        category=category,
+        radius_km=radius_km,
+    )
+
+    return APIResponse(
+        success=True,
+        data={
+            "location": loc_meta,
+            "category": category,
+            "radius_km": radius_km,
+            "competitor_count": len(competitors),
+            "competitors": competitors,
+        },
+        message=f"Discovered {len(competitors)} local competitors in {loc_meta.get('village', 'locality')}.",
+    )
+

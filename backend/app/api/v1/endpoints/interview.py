@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
 
+from app.adapters.bhashini_adapter import BhashiniAdapter
 from app.adapters.gemini_adapter import GeminiAdapter
 from app.adapters.supabase_adapter import supabase_adapter
 from app.core.errors import ResourceNotFoundException
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 prompt_service = PromptService()
 gemini_adapter = GeminiAdapter()
+bhashini_adapter = BhashiniAdapter()
 
 # Sandbox in-memory store for fallback/tests
 _OFFLINE_SESSIONS: Dict[str, Dict[str, Any]] = {}
@@ -70,6 +72,21 @@ class InterviewSessionResponse(BaseModel):
     started_at: datetime
     completed_at: Optional[datetime] = None
     messages: List[InterviewMessageItem] = Field(default_factory=list)
+
+
+class VoiceTurnInput(BaseModel):
+    audio_base64: str = Field(..., min_length=1, description="Base64 encoded audio bytes from mobile microphone")
+    language: Optional[str] = None
+
+
+class VoiceTurnResponse(BaseModel):
+    transcribed_text: str
+    reply: str
+    next_question: Optional[str] = None
+    language: str
+    audio_response_base64: str
+    extracted_factors: List[ExtractedFactor] = Field(default_factory=list)
+    is_complete: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -407,3 +424,83 @@ async def complete_interview_session(
         )
 
     raise ResourceNotFoundException("InterviewSession", session_id)
+
+
+@router.post(
+    "/interviews/{session_id}/voice",
+    response_model=APIResponse[VoiceTurnResponse],
+    summary="Send voice message from phone mic and receive AI mentor advice with synthesized speech",
+)
+async def process_voice_interview_message(
+    session_id: str,
+    voice_in: VoiceTurnInput,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    cleaned_audio = voice_in.audio_base64.strip()
+    if not cleaned_audio:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Audio payload must not be empty.",
+        )
+
+    # 1. Verify session exists
+    db = _get_db()
+    session_lang = voice_in.language or "hi"
+    found = False
+    if db is not None:
+        try:
+            sess_res = db.table("interview_sessions").select("language").eq("id", session_id).execute()
+            if sess_res.data:
+                found = True
+                session_lang = sess_res.data[0].get("language") or session_lang
+        except Exception as e:
+            logger.warning(f"Error checking session in db: {e}")
+
+    if not found:
+        if session_id in _OFFLINE_SESSIONS:
+            session_lang = _OFFLINE_SESSIONS[session_id].get("language") or session_lang
+        else:
+            raise ResourceNotFoundException("InterviewSession", session_id)
+
+    # 2. Transcribe voice to text via Bhashini ASR
+    transcription = await bhashini_adapter.speech_to_text(cleaned_audio, lang=session_lang)
+    if not transcription or not transcription.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Could not transcribe audio input. Please speak clearly into the microphone.",
+        )
+
+    # 3. Process transcribed message through mentor reasoning
+    msg_input = InterviewMessageInput(content=transcription, language=session_lang)
+    turn_api_resp = await send_interview_message(
+        session_id=session_id,
+        msg_in=msg_input,
+        current_user=current_user,
+    )
+    turn_data = turn_api_resp.data
+
+    # 4. Synthesize AI mentor response into speech via Bhashini TTS
+    combined_speech = (
+        f"{turn_data.reply} {turn_data.next_question}".strip()
+        if turn_data.next_question
+        else turn_data.reply
+    )
+    audio_response_b64 = await bhashini_adapter.text_to_speech(
+        combined_speech,
+        lang=session_lang,
+    )
+
+    return APIResponse(
+        success=True,
+        data=VoiceTurnResponse(
+            transcribed_text=transcription,
+            reply=turn_data.reply,
+            next_question=turn_data.next_question,
+            language=session_lang,
+            audio_response_base64=audio_response_b64,
+            extracted_factors=turn_data.extracted_factors,
+            is_complete=turn_data.is_complete,
+        ),
+        message="Voice message processed and audio response synthesized.",
+    )
+

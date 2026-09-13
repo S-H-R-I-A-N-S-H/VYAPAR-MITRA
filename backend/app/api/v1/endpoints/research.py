@@ -4,6 +4,7 @@ import uuid
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, status
 
+from app.adapters.mappls_adapter import MapplsAdapter
 from app.adapters.supabase_adapter import supabase_adapter
 from app.core.errors import ResourceNotFoundException
 from app.core.security import get_current_user
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 conflict_detector = ConflictDetector()
 prompt_service = PromptService()
+mappls_adapter = MapplsAdapter()
 
 # In-memory stores for sandbox/test mode
 _OFFLINE_PROJECTS: Dict[str, Dict[str, Any]] = {}
@@ -187,7 +189,8 @@ async def list_project_evidence(
                         created_at=datetime.fromisoformat(r["created_at"]),
                     )
                 )
-            return APIResponse(success=True, data=items)
+            if items:
+                return APIResponse(success=True, data=items)
         except Exception as e:
             logger.warning(f"Database get evidence failed: {e}")
 
@@ -313,3 +316,102 @@ async def get_project_uncertainty(
         data=report,
         message="Uncertainty analysis generated.",
     )
+
+
+@router.post(
+    "/research/projects/{project_id}/discover-competitors",
+    summary="Ground project research by discovering actual nearby competitors via Mappls",
+)
+async def discover_project_competitors(
+    project_id: str,
+    category: Optional[str] = None,
+    radius_km: float = 5.0,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    # Verify project exists
+    await get_research_project(project_id, current_user)
+    db = _get_db()
+    now = datetime.now(timezone.utc)
+
+    # Resolve locality / coordinates
+    lat = 18.5204
+    lon = 73.8567
+    cat = category or "General Enterprise"
+
+    if db is not None:
+        try:
+            proj_res = db.table("research_projects").select("*, locations(*), businesses(*)").eq("id", project_id).execute()
+            if proj_res.data:
+                p = proj_res.data[0]
+                loc = p.get("locations") or {}
+                biz = p.get("businesses") or {}
+                if loc.get("latitude") and loc.get("longitude"):
+                    lat = float(loc["latitude"])
+                    lon = float(loc["longitude"])
+                if biz.get("name") and not category:
+                    cat = biz["name"]
+        except Exception as e:
+            logger.warning(f"Error reading project location/business from db: {e}")
+
+    competitors = await mappls_adapter.find_nearby_competitors(
+        latitude=lat,
+        longitude=lon,
+        category=cat,
+        radius_km=radius_km,
+    )
+
+    # Record as MAPPLS_POI EvidenceItem
+    comp_names = [c["name"] for c in competitors[:3]]
+    claim_text = (
+        f"{len(competitors)} direct competitors registered locally: {', '.join(comp_names)}."
+        if competitors
+        else f"Zero registered competitors found within {radius_km}km via Mappls."
+    )
+
+    ev_id = str(uuid.uuid4())
+    ev_item = EvidenceItem(
+        id=ev_id,
+        research_project_id=project_id,
+        claim=claim_text,
+        extracted_value=str(len(competitors)),
+        unit="competitors",
+        source_name="Mappls GeoPOI",
+        source_url="https://atlas.mappls.com",
+        source_type="MAPPLS_POI",
+        confidence_score=0.90,
+        created_at=now,
+    )
+
+    if db is not None:
+        try:
+            db.table("evidence").insert({
+                "id": ev_id,
+                "research_project_id": project_id,
+                "claim": claim_text,
+                "extracted_value": str(len(competitors)),
+                "unit": "competitors",
+                "source_name": "Mappls GeoPOI",
+                "source_url": "https://atlas.mappls.com",
+                "source_type": "MAPPLS_POI",
+                "confidence_score": 0.90,
+                "created_at": now.isoformat(),
+            }).execute()
+        except Exception as e:
+            logger.warning(f"Failed to insert Mappls evidence in db: {e}")
+
+    if project_id not in _OFFLINE_EVIDENCE:
+        _OFFLINE_EVIDENCE[project_id] = []
+    _OFFLINE_EVIDENCE[project_id].append(ev_item.model_dump())
+
+    return APIResponse(
+        success=True,
+        data={
+            "project_id": project_id,
+            "category": cat,
+            "competitor_count": len(competitors),
+            "competitors": competitors,
+            "evidence_item": ev_item,
+        },
+        message=f"Discovered {len(competitors)} local competitors and logged to research evidence.",
+    )
+

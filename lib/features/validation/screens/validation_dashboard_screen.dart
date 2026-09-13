@@ -253,6 +253,37 @@ class _ValidationDashboardScreenState
                                   color: AppColors.textSecondary,
                                 ),
                               ),
+                              if (p.title == 'Competition') ...[
+                                const SizedBox(height: 8),
+                                InkWell(
+                                  onTap: () {
+                                    Navigator.pushNamed(context, '/competitor-map');
+                                  },
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.map_rounded, size: 14, color: AppColors.primary),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          isHindi ? 'स्थानीय प्रतियोगी मानचित्र देखें →' : 'View Hyperlocal Competitor Map →',
+                                          style: AppTypography.labelSmall.copyWith(
+                                            color: AppColors.primary,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
