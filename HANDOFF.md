@@ -413,6 +413,18 @@ flutter test
 
 This is the most critical section for the team. It provides complete transparency regarding what was built, what can be demonstrated immediately, what is mocked, and the major remaining chunk of work.
 
+### ⚠️ Current Checkpoint & Git Safety Notice
+
+> [!IMPORTANT]
+> **Current Git State:**
+> - **Active Local Branch:** `main`
+> - **Latest Local Checkpoint Commit:** `1ef2551 feat: add loan repayment planner` (Phase 5)
+> - **Previous Checkpoint Commit:** `3bdf4a7 feat: complete business and financial planning flow` (Phase 4)
+> - **Remote Branch:** `origin/main` (currently at `473a778`)
+>
+> **CRITICAL GIT DIVERGENCE WARNING:**
+> Local `main` and remote `origin/main` have diverged (1 and 1 different commits). **Do NOT run `git pull` blindly**, and **do NOT force push**. The divergence represents teammate work on `origin/main` alongside our verified Phase 4 and Phase 5 commits locally. Merging or rebasing must be deliberately coordinated so neither teammate commits nor local financial modules are lost.
+
 ### 7.1 What All We Did Till Now
 
 We have established the complete architectural backbone, deterministic domain engines, REST API layer, Flutter screen flows, and documentation suite:
@@ -475,7 +487,28 @@ We have established the complete architectural backbone, deterministic domain en
    - Built duplicate prevention: checks if `business.businessId` is already set before making network call, preventing duplicate creation upon screen re-entry.
    - Robust error handling: displays error SnackBar and stays on screen without updating state or navigating on failure.
    - Automated tests: created [test/features/business_creation_integration_test.dart](file:///c:/VM/test/features/business_creation_integration_test.dart) (5/5 passing). Full Flutter test suite expanded to 27/27 passing.
-   - Real backend verification performed against live port 8000: verified `OPTIONS /businesses` → 200, `POST /profile` → 201 (`profileId: 3507cde8-320d-46b5-9122-2256a2dba260`), and `POST /businesses` → 201 (`business_id: eb7050a5-e245-4dd4-8bba-8307ce78c27c` with `entrepreneur_id` correctly referencing `profileId`).
+    - Real backend verification performed against live port 8000: verified `OPTIONS /businesses` → 200, `POST /profile` → 201 (`profileId: 3507cde8-320d-46b5-9122-2256a2dba260`), and `POST /businesses` → 201 (`business_id: eb7050a5-e245-4dd4-8bba-8307ce78c27c` with `entrepreneur_id` correctly referencing `profileId`).
+10. **Phase 4: Financial Planning & Dynamic Modeler (Complete & Verified — Commit `3bdf4a7`):**
+    - Implemented live dynamic connection between Flutter financial planning frontend and FastAPI financial endpoints (`/api/v1/finance/simulate`, `/api/v1/finance/scenarios`, and `/api/v1/finance/scenarios/{id}/what-if`).
+    - Dynamic values: Replaced hardcoded dummy revenue/cost figures with active business inputs from `selectedBusinessProvider` (`monthlyRevenue`, `monthlyOperatingCosts`).
+    - Dynamic loan sizing: Automatically derives required loan amount from `totalProjectCost - ownCapital`.
+    - Real EMI, DSCR, net cash flow, and risk assessment derived from backend `FinancialSimulationResult`.
+    - Resilient offline fallback: Eliminated static 2491.0 fallback in favor of `DeterministicFinancialCalculator.computeLocalFallback()` using standard reducing-balance math identical to the backend.
+    - Interactive what-if stress testing: Supports capacity scenarios (50%, 75%, 90%, 100%) dynamically scaling revenues and costs (30% fixed, 70% variable) and reflecting stressed net cash flow.
+    - Automated tests: Created `test/features/finance_integration_test.dart` (5/5 passing). Full Flutter test suite reached 32/32 passing.
+11. **Phase 5: Loan & Repayment Planner (Complete & Verified — Commit `1ef2551`):**
+    - Added dedicated `LoanRepaymentScreen` accessible at route `/loan-planner`.
+    - Visualizes the projected loan calculated by the existing financial planning module without duplicating backend math.
+    - Full Amortization Schedule generator: Implemented `DeterministicFinancialCalculator.generateAmortizationSchedule()` matching backend reducing-balance math ($r = \frac{\text{annual\_rate}}{1200}$, $\text{Interest}_m = \text{Balance}_{m-1} \times r$, $\text{Principal}_m = \min(\text{EMI} - \text{Interest}_m, \text{Balance}_{m-1})$, $\text{Closing}_m = \text{Balance}_{m-1} - \text{Principal}_m$), guaranteeing closing balance drops to ₹0.00 in the final month.
+    - Dynamic Loan Summary: Shows required loan, monthly EMI, interest rate (9.0% p.a.), tenure (60 months), total interest, and total repayment directly from `financialProvider.simulation`.
+    - Payment Composition: Proportional bar and percentages for Principal vs Total Interest.
+    - First Month Breakdown: Month 1 opening balance, principal paid, interest paid, and closing balance.
+    - Year-by-Year Schedule: Year filter chips (Years 1–5) displaying monthly schedule rows.
+    - Tenure Comparison (36 vs 60 Months): Pure local calculation showing trade-off between higher monthly EMI and substantial interest savings, without mutating active `FinancialState`.
+    - Navigation: Added CTA button (`"View Repayment Schedule →"` / `"पुनर्भुगतान सारणी देखें →"`) inside the EMI card on `FinancialScenarioScreen` leading to `/loan-planner`, and bottom CTA leading to `/action-plan`.
+    - Bilingual Support: Full Hindi and English localized strings across all cards and metrics.
+    - Robust Edge Case Handling: Graceful empty states if simulation is absent; safe division-by-zero guards (`clamp(1, 1000)`).
+    - Automated tests: Created `test/features/loan_repayment_test.dart` (7/7 passing). Full Flutter test suite reached 39/39 passing. `dart analyze` reports 0 errors and 0 warnings. Backend diff remained 100% empty.
 
 ### 7.2 Integration Phase Status Summary
 
@@ -485,7 +518,52 @@ We have established the complete architectural backbone, deterministic domain en
 | **Phase 1** | Frontend Auth & Token Propagation (`authProvider` → `apiClientProvider`) | **COMPLETE** | 7 automated tests pass (`test/core/auth_integration_test.dart`); HTTP 401 resolved |
 | **Phase 2** | Profile Contract Alignment & State Persistence (`EntrepreneurProfileCreate` → `setProfileId`) | **COMPLETE** | 3 integration tests pass (`test/features/profile_integration_test.dart`); HTTP 422 resolved |
 | **Phase 3** | Business Creation & Real `business_id` Propagation | **COMPLETE** | 5 integration tests pass (`test/features/business_creation_integration_test.dart`); all 27 Flutter tests pass; live backend verified (OPTIONS 200, POST 201) |
-| **Phase 4** | Financial Engine & Scenario Integration | **NOT STARTED** | Next to execute |
+| **Phase 4** | Financial Engine & Scenario Integration (Commit `3bdf4a7`) | **COMPLETE** | 5 integration tests pass (`test/features/finance_integration_test.dart`); full suite 32/32 pass; dynamic revenues/costs & reducing-balance EMI verified |
+| **Phase 5** | Loan & Repayment Planner (`/loan-planner`, Commit `1ef2551`) | **COMPLETE** | 7 tests pass (`test/features/loan_repayment_test.dart`); full suite 39/39 pass; `dart analyze` 0 errors, 0 warnings; backend untouched |
+
+#### 7.2.1 Financial Architecture: Authoritative Backend Engine Integration
+- **Single Source of Truth:** All financial calculations originate from the authoritative backend `FinancialEngine` (`backend/app/services/financial_engine.py`).
+- **Computed Outputs:** The backend engine provides authoritative project cost, required loan amount ($P = \text{Total Capex} - \text{Own Capital}$), monthly reducing-balance EMI, total interest, total repayment, debt service coverage ratio (DSCR), affordability verdict, and initial amortization preview.
+- **Engine Reuse:** The Loan & Repayment Planner reuses this existing simulation result via `financialProvider.simulation`. It does **NOT** duplicate backend loan logic or spawn a redundant backend service.
+- **Scope Discipline (Pre-Launch Planning):** The module is strictly designed for **PROJECTED / PRE-LAUNCH** loan planning to help rural entrepreneurs assess debt feasibility before committing to a bank loan. It does **NOT** invent banking transaction fiction, loan disbursement tracking, or ledger entries.
+
+#### 7.2.2 Loan & Repayment Planner Flow & Architecture
+- **Route:** `/loan-planner` (mapped in `AppRouter.generateRoute()`)
+- **User Navigation Journey:**
+  ```
+  Financial Planning (/finance-modeler)
+      │
+      ▼  [CTA: "View Repayment Schedule →"]
+  Loan & Repayment Planner (/loan-planner)
+      │
+      ▼  [CTA: "View Final Action Plan & Milestones →"]
+  Action Plan (/action-plan)
+  ```
+- **Key Display Components:**
+  1. *Loan Summary & Terms Card:* Loan amount, EMI, 9.0% annual rate, 60 mo tenure, total interest, and total repayment.
+  2. *Payment Composition Bar:* Proportional visual split and percentages for Principal vs Total Interest.
+  3. *Month 1 Payment Breakdown:* Opening balance, principal paid, interest paid, and closing balance.
+  4. *Year-by-Year Amortization Schedule:* Filter chips for Years 1–5 with monthly schedule rows.
+  5. *Tenure Trade-Off Comparison:* Side-by-side comparison of 3-year (36 mo) vs 5-year (60 mo) loans with calculated interest savings and EMI impact.
+  6. *State Immutability Guarantee:* Tenure comparison is calculated via pure local helper functions and does **not** mutate the active `FinancialState` or saved scenario.
+
+#### 7.2.3 Team Ownership Boundaries: Digital Financial Logbook & Ledger Separation
+> [!CAUTION]
+> **STRICT TEAM BOUNDARY NOTICE:**
+> The **Digital Financial Logbook / Financial Ledger** module is being independently implemented by another teammate. We currently do **NOT** have direct access to that teammate's branch or implementation files.
+>
+> **Guidelines for all contributors on this branch:**
+> 1. **Do NOT claim** that the Digital Financial Logbook or Ledger is implemented in this branch.
+> 2. **Do NOT create** a parallel or competing ledger implementation in this branch.
+> 3. **Do NOT touch or rewrite** teammate-owned logbook files upon future synchronization without explicit team coordination.
+> 4. Keep the pre-launch financial planning module clean and decoupled from post-launch daily accounting logbooks.
+
+#### 7.2.4 Verified Test Suite & Static Analysis Status
+- **Targeted Loan Planner Tests:** 7/7 passed (`test/features/loan_repayment_test.dart`)
+- **Targeted Financial Modeler Tests:** 5/5 passed (`test/features/finance_integration_test.dart`)
+- **Full Flutter Test Suite:** 39/39 passed across all 8 feature test suites
+- **Static Analysis (`dart analyze`):** 0 errors, 0 warnings (2 pre-existing framework info lints in `api_client.dart` and `main.dart`)
+- **Backend Safety:** `git diff -- backend/` is 100% empty / untouched
 
 ---
 
@@ -517,9 +595,12 @@ Here is the exact breakdown of what is currently mocked or incomplete:
 - *Current Status:* No offline SQLite/Hive database on the phone. If the entrepreneur is in an area with zero cellular connectivity, survey data is not persisted locally.
 - *What Needs to be Done:* Add local storage (`drift` or `hive`) to store offline survey responses and sync when connectivity resumes.
 
-#### 4. Post-Launch Features & Exporters
-- *Missing:* Exporting business viability reports and pre-filled PMEGP / MUDRA application summaries to downloadable **PDF files**.
-- *Missing:* Post-launch daily ledger tracking (Milestone tracking logbook).
+#### 4. Remaining & Future Financial Modules (Roadmap Scope)
+- **Digital Financial Logbook / Unified Ledger:** Under active development by another teammate; pending branch integration.
+- **Monthly Financial Statements:** Post-launch operational statement tracking revenue, opex, and cash flow from daily entries.
+- **Multi-Year Financial Projections:** 3-to-5 year forward forecasting for bank appraisal.
+- **DPR (Detailed Project Report) & PDF Exporters:** Exporting bank-ready project reports, loan amortization schedules, and pre-filled PMEGP / MUDRA application packages to downloadable PDF files.
+- **Account Aggregator & Banking Integration:** Future phase connecting to financial information providers for real account verification.
 
 ---
 
