@@ -10,6 +10,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.api.v1.router import api_v1_router
+from app.api.v1.endpoints import profile, recommendations
 from app.core.config import settings
 from app.core.errors import VyaparMitraException
 from app.schemas.common import APIResponse
@@ -55,8 +56,12 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     )
 
 
-# Attach API v1 Router
+# Attach API v1 Router (under /api/v1)
 app.include_router(api_v1_router, prefix="/api")
+
+# Direct /api aliases for Step 1 & Step 13 endpoints
+app.include_router(profile.router, prefix="/api", tags=["Profile (Direct Alias)"])
+app.include_router(recommendations.router, prefix="/api", tags=["Recommendations (Direct Alias)"])
 
 
 @app.get("/")

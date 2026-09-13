@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     SUPABASE_URL: str = ""
     SUPABASE_KEY: str = ""
     SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
-    SUPABASE_JWT_SECRET: str = ""
+    SUPABASE_JWT_SECRET: str = "test_supabase_jwt_secret_dev_key_32bytes_long"
 
     # Gemini AI
     GEMINI_API_KEY: str = ""

@@ -7,6 +7,8 @@ import '../features/onboarding/screens/welcome_screen.dart';
 import '../features/opportunities/screens/curated_opportunities_screen.dart';
 import '../features/profile/screens/business_profile_screen.dart';
 import '../features/recommendations/screens/action_plan_screen.dart';
+import '../features/recommendations/screens/scheme_detail_screen.dart';
+import '../features/recommendations/screens/scheme_recommendations_screen.dart';
 import '../features/research/screens/research_progress_screen.dart';
 import '../features/validation/screens/validation_dashboard_screen.dart';
 
@@ -20,6 +22,8 @@ class AppRouter {
   static const String researchProgress = '/research-progress';
   static const String validationDashboard = '/validation-dashboard';
   static const String financeModeler = '/finance-modeler';
+  static const String schemeRecommendations = '/scheme-recommendations';
+  static const String schemeDetail = '/scheme-detail';
   static const String actionPlan = '/action-plan';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -42,6 +46,10 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const ValidationDashboardScreen());
       case financeModeler:
         return MaterialPageRoute(builder: (_) => const FinancialScenarioScreen());
+      case schemeRecommendations:
+        return MaterialPageRoute(builder: (_) => const SchemeRecommendationsScreen());
+      case schemeDetail:
+        return MaterialPageRoute(builder: (_) => const SchemeDetailScreen());
       case actionPlan:
         return MaterialPageRoute(builder: (_) => const ActionPlanScreen());
       default:

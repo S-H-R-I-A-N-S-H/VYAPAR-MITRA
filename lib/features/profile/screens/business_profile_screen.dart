@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/api_endpoints.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -67,20 +68,32 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
     // Attempt backend save via ApiClient
     try {
       final apiClient = ref.read(apiClientProvider);
-      // Create profile payload
-      await apiClient.post(
-        'http://127.0.0.1:8000/api/v1/profile',
-        body: {
-          'full_name': _nameController.text.trim(),
-          'phone_number': '9876543210',
-          'district': _district,
-          'block': _block,
+      final payload = {
+        'full_name': _nameController.text.trim(),
+        'preferred_language': ref.read(localeProvider).languageCode,
+        'voice_enabled': true,
+        'location': {
           'state': 'Madhya Pradesh',
-          'primary_language': ref.read(localeProvider).languageCode,
-          'available_capital': _capital,
-          'education_level': '10th_pass',
-          'primary_skill': 'machinery',
+          'district': _district,
+          'town_or_village': _block,
+          'rural_or_urban': 'rural',
         },
+        'available_capital': _capital,
+        'skills': ['machinery', 'operations'],
+        'interests': ['manufacturing', 'food processing'],
+        'scheme_category': _socialCategory,
+        'business_idea': _ideaController.text.trim(),
+        'business_name': _ideaController.text.trim().isNotEmpty ? _ideaController.text.trim() : 'Cold-Press Oil Mill',
+        'business_activity': 'Food Processing',
+        'business_type': 'manufacturing',
+        'business_status': 'new',
+        'total_project_cost': _capital * 4.0,
+        'loan_required': _capital * 3.0,
+        'consent_recorded': true,
+      };
+      await apiClient.post(
+        ApiEndpoints.profile,
+        body: payload,
       );
     } catch (e) {
       debugPrint('Profile sync sandbox fallback: $e');

@@ -50,6 +50,13 @@ class AppTypography {
         height: 1.4,
       );
 
+  static TextStyle get titleMedium => GoogleFonts.plusJakartaSans(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textPrimary,
+        height: 1.4,
+      );
+
   static TextStyle get bodyLarge => GoogleFonts.plusJakartaSans(
         fontSize: 16,
         fontWeight: FontWeight.w500,

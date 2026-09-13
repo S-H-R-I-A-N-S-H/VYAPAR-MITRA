@@ -65,5 +65,8 @@ class ApiEndpoints {
   static String get schemesMatch => '$baseUrl/schemes/match';
 
   // Recommendations & Final Synthesis
+  static String get recommendations => '$baseUrl/recommendations';
+  static String get recommendationsLatest => '$baseUrl/recommendations/latest';
+  static String recommendationDetail(String id) => '$baseUrl/recommendations/$id';
   static String businessRecommendation(String id) => '$baseUrl/businesses/$id/recommendation';
 }

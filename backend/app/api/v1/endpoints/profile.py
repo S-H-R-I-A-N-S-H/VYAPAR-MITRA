@@ -35,33 +35,47 @@ def _get_db():
     status_code=status.HTTP_201_CREATED,
     summary="Create or initialize entrepreneur profile",
 )
-async def create_profile(
+@router.put(
+    "/profile",
+    response_model=APIResponse[EntrepreneurProfileResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Update or upsert entrepreneur profile",
+)
+async def upsert_profile(
     profile_in: EntrepreneurProfileCreate,
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
-    user_id = str(current_user.get("sub") or current_user.get("id"))
+    user_id = str(current_user.get("sub") or current_user.get("id") or current_user.get("user_id"))
     db = _get_db()
-
     now = datetime.now(timezone.utc)
     location_id = None
 
+    # Handle nested or default location
+    loc_state = profile_in.location.state if profile_in.location else "Madhya Pradesh"
+    loc_district = profile_in.location.district if profile_in.location else "Indore"
+    loc_town = profile_in.location.town_or_village if profile_in.location else "Sanwer"
+    loc_pincode = profile_in.location.pincode if profile_in.location else None
+    loc_lat = profile_in.location.latitude if profile_in.location else None
+    loc_lng = profile_in.location.longitude if profile_in.location else None
+    loc_rural_urban = profile_in.location.rural_or_urban if profile_in.location else (profile_in.rural_or_urban or "rural")
+
     if db is not None:
         try:
-            # 1. Insert Location
+            # 1. Insert or update Location
             loc_dict = {
-                "state": profile_in.location.state,
-                "district": profile_in.location.district,
-                "town_or_village": profile_in.location.town_or_village,
-                "pincode": profile_in.location.pincode,
-                "latitude": profile_in.location.latitude,
-                "longitude": profile_in.location.longitude,
+                "state": loc_state,
+                "district": loc_district,
+                "town_or_village": loc_town,
+                "pincode": loc_pincode,
+                "latitude": loc_lat,
+                "longitude": loc_lng,
                 "source": "USER_SELECTED",
             }
             loc_res = db.table("locations").insert(loc_dict).execute()
             if loc_res.data:
                 location_id = loc_res.data[0]["id"]
 
-            # 2. Check existing profile
+            # 2. Check existing profile for user_id to prevent duplicates
             existing = db.table("entrepreneurs").select("*").eq("user_id", user_id).execute()
             profile_data = {
                 "user_id": user_id,
@@ -74,6 +88,15 @@ async def create_profile(
                 "skills": profile_in.skills,
                 "interests": profile_in.interests,
                 "risk_preference": profile_in.risk_preference,
+                "age": profile_in.age,
+                "education": profile_in.education,
+                "rural_or_urban": loc_rural_urban,
+                "occupation": profile_in.occupation,
+                "experience_years": profile_in.experience_years,
+                "annual_income": profile_in.annual_income,
+                "previous_government_subsidy": profile_in.previous_government_subsidy,
+                "previous_government_loan": profile_in.previous_government_loan,
+                "previously_used_schemes": profile_in.previously_used_schemes,
                 "updated_at": now.isoformat(),
             }
 
@@ -85,15 +108,68 @@ async def create_profile(
                 res = db.table("entrepreneurs").insert(profile_data).execute()
                 record = res.data[0]
 
-            # 3. Optional consented category profile
+            ent_id = record["id"]
+
+            # 3. Optional Consented Eligibility Profile
             if profile_in.consent_recorded:
                 elig_data = {
-                    "entrepreneur_id": record["id"],
+                    "entrepreneur_id": ent_id,
                     "category": profile_in.scheme_category or "general",
+                    "gender": profile_in.gender or "male",
+                    "is_woman_entrepreneur": profile_in.is_woman_entrepreneur or (profile_in.gender == "female"),
+                    "disability_category": profile_in.disability_category,
+                    "minority_category": profile_in.minority_category,
+                    "ex_serviceman_status": profile_in.ex_serviceman_status,
                     "consent_given": True,
                     "consent_recorded_at": now.isoformat(),
+                    "updated_at": now.isoformat(),
                 }
-                db.table("entrepreneur_eligibility_profile").insert(elig_data).execute()
+                existing_elig = db.table("entrepreneur_eligibility_profile").select("*").eq("entrepreneur_id", ent_id).execute()
+                if existing_elig.data:
+                    db.table("entrepreneur_eligibility_profile").update(elig_data).eq("entrepreneur_id", ent_id).execute()
+                else:
+                    db.table("entrepreneur_eligibility_profile").insert(elig_data).execute()
+
+            # 4. Upsert Business Information
+            biz_id = None
+            if profile_in.business_name or profile_in.business_idea:
+                biz_name = profile_in.business_name or profile_in.business_idea or "My Enterprise"
+                biz_data = {
+                    "entrepreneur_id": ent_id,
+                    "name": biz_name,
+                    "status": "new",
+                    "domain": profile_in.business_type or "manufacturing",
+                    "product_or_service": profile_in.business_activity or "Processing",
+                    "description": profile_in.business_idea or biz_name,
+                    "scale": "micro",
+                    "business_activity": profile_in.business_activity,
+                    "business_type": profile_in.business_type or "manufacturing",
+                    "business_status": profile_in.business_status or "new",
+                    "sector": profile_in.sector or "Agri-Processing",
+                    "years_in_business": profile_in.years_in_business,
+                    "annual_turnover": profile_in.annual_turnover,
+                    "number_of_employees": profile_in.number_of_employees,
+                    "is_greenfield": profile_in.is_greenfield,
+                    "total_project_cost": profile_in.total_project_cost,
+                    "own_capital": profile_in.own_capital or profile_in.available_capital,
+                    "loan_required": profile_in.loan_required,
+                    "existing_loans": profile_in.existing_loans,
+                    "existing_loan_amount": profile_in.existing_loan_amount,
+                    "monthly_emi": profile_in.monthly_emi,
+                    "working_capital_requirement": profile_in.working_capital_requirement,
+                    "machinery_equipment_cost": profile_in.machinery_equipment_cost,
+                    "updated_at": now.isoformat(),
+                }
+                existing_biz = db.table("businesses").select("*").eq("entrepreneur_id", ent_id).execute()
+                if existing_biz.data:
+                    b_res = db.table("businesses").update(biz_data).eq("id", existing_biz.data[0]["id"]).execute()
+                    if b_res.data:
+                        biz_id = b_res.data[0]["id"]
+                else:
+                    biz_data["created_at"] = now.isoformat()
+                    b_res = db.table("businesses").insert(biz_data).execute()
+                    if b_res.data:
+                        biz_id = b_res.data[0]["id"]
 
             response_data = EntrepreneurProfileResponse(
                 id=str(record["id"]),
@@ -107,24 +183,44 @@ async def create_profile(
                 interests=record.get("interests") or [],
                 risk_preference=record.get("risk_preference") or "moderate",
                 scheme_category=profile_in.scheme_category or "general",
+                age=record.get("age") or profile_in.age,
+                gender=profile_in.gender,
+                education=record.get("education") or profile_in.education,
+                rural_or_urban=record.get("rural_or_urban") or loc_rural_urban,
+                occupation=record.get("occupation") or profile_in.occupation,
+                experience_years=float(record.get("experience_years") or 2.0),
+                annual_income=float(record.get("annual_income") or 120000.0),
+                previous_government_subsidy=bool(record.get("previous_government_subsidy") or False),
+                previous_government_loan=bool(record.get("previous_government_loan") or False),
+                previously_used_schemes=record.get("previously_used_schemes") or [],
+                business_id=str(biz_id) if biz_id else None,
+                business_name=profile_in.business_name or profile_in.business_idea,
+                business_activity=profile_in.business_activity,
+                business_type=profile_in.business_type,
+                business_status=profile_in.business_status,
+                sector=profile_in.sector,
+                total_project_cost=profile_in.total_project_cost,
+                own_capital=profile_in.own_capital or profile_in.available_capital,
+                loan_required=profile_in.loan_required,
                 created_at=datetime.fromisoformat(record["created_at"]),
                 updated_at=datetime.fromisoformat(record["updated_at"]),
             )
-            return APIResponse(success=True, data=response_data, message="Profile created successfully.")
+            return APIResponse(success=True, data=response_data, message="Profile saved and normalized successfully.")
 
         except Exception as e:
             logger.warning(f"Database write failed ({e}); falling back to in-memory profile store.")
 
-    # Offline / sandbox in-memory persistence
+    # Offline / Sandbox fallback
     loc_id = str(uuid.uuid4())
     _OFFLINE_LOCATIONS[loc_id] = {
         "id": loc_id,
-        "state": profile_in.location.state,
-        "district": profile_in.location.district,
-        "town_or_village": profile_in.location.town_or_village,
-        "pincode": profile_in.location.pincode,
-        "latitude": profile_in.location.latitude,
-        "longitude": profile_in.location.longitude,
+        "state": loc_state,
+        "district": loc_district,
+        "town_or_village": loc_town,
+        "pincode": loc_pincode,
+        "latitude": loc_lat,
+        "longitude": loc_lng,
+        "rural_or_urban": loc_rural_urban,
         "created_at": now,
     }
 
@@ -141,6 +237,24 @@ async def create_profile(
         "interests": profile_in.interests,
         "risk_preference": profile_in.risk_preference,
         "scheme_category": profile_in.scheme_category or "general",
+        "age": profile_in.age or 28,
+        "gender": profile_in.gender or "male",
+        "education": profile_in.education or "10th_pass",
+        "rural_or_urban": loc_rural_urban,
+        "occupation": profile_in.occupation or "Micro-entrepreneur",
+        "experience_years": profile_in.experience_years or 2.0,
+        "annual_income": profile_in.annual_income or 120000.0,
+        "previous_government_subsidy": profile_in.previous_government_subsidy or False,
+        "previous_government_loan": profile_in.previous_government_loan or False,
+        "previously_used_schemes": profile_in.previously_used_schemes or [],
+        "business_name": profile_in.business_name or profile_in.business_idea,
+        "business_activity": profile_in.business_activity or "Processing",
+        "business_type": profile_in.business_type or "manufacturing",
+        "business_status": profile_in.business_status or "new",
+        "sector": profile_in.sector or "Agri-Processing",
+        "total_project_cost": profile_in.total_project_cost or 250000.0,
+        "own_capital": profile_in.own_capital or profile_in.available_capital,
+        "loan_required": profile_in.loan_required or 200000.0,
         "created_at": now,
         "updated_at": now,
     }
@@ -148,7 +262,7 @@ async def create_profile(
     return APIResponse(
         success=True,
         data=EntrepreneurProfileResponse(**stored),
-        message="Profile created successfully (sandbox mode).",
+        message="Profile saved successfully (sandbox mode).",
     )
 
 
@@ -158,7 +272,7 @@ async def create_profile(
     summary="Get current user's profile",
 )
 async def get_profile(current_user: Dict[str, Any] = Depends(get_current_user)):
-    user_id = str(current_user.get("sub") or current_user.get("id"))
+    user_id = str(current_user.get("sub") or current_user.get("id") or current_user.get("user_id"))
     db = _get_db()
 
     if db is not None:
@@ -166,6 +280,19 @@ async def get_profile(current_user: Dict[str, Any] = Depends(get_current_user)):
             res = db.table("entrepreneurs").select("*").eq("user_id", user_id).execute()
             if res.data:
                 record = res.data[0]
+                ent_id = record["id"]
+
+                # Fetch extra details if available
+                scheme_cat = "general"
+                gender = "male"
+                elig = db.table("entrepreneur_eligibility_profile").select("*").eq("entrepreneur_id", ent_id).execute()
+                if elig.data:
+                    scheme_cat = elig.data[0].get("category") or "general"
+                    gender = elig.data[0].get("gender") or "male"
+
+                biz = db.table("businesses").select("*").eq("entrepreneur_id", ent_id).execute()
+                biz_rec = biz.data[0] if biz.data else {}
+
                 return APIResponse(
                     success=True,
                     data=EntrepreneurProfileResponse(
@@ -179,7 +306,26 @@ async def get_profile(current_user: Dict[str, Any] = Depends(get_current_user)):
                         skills=record.get("skills") or [],
                         interests=record.get("interests") or [],
                         risk_preference=record.get("risk_preference") or "moderate",
-                        scheme_category="general",
+                        scheme_category=scheme_cat,
+                        age=record.get("age") or 28,
+                        gender=gender,
+                        education=record.get("education") or "10th_pass",
+                        rural_or_urban=record.get("rural_or_urban") or "rural",
+                        occupation=record.get("occupation") or "Micro-entrepreneur",
+                        experience_years=float(record.get("experience_years") or 2.0),
+                        annual_income=float(record.get("annual_income") or 120000.0),
+                        previous_government_subsidy=bool(record.get("previous_government_subsidy") or False),
+                        previous_government_loan=bool(record.get("previous_government_loan") or False),
+                        previously_used_schemes=record.get("previously_used_schemes") or [],
+                        business_id=str(biz_rec.get("id")) if biz_rec.get("id") else None,
+                        business_name=biz_rec.get("name"),
+                        business_activity=biz_rec.get("business_activity") or biz_rec.get("product_or_service"),
+                        business_type=biz_rec.get("business_type") or biz_rec.get("domain"),
+                        business_status=biz_rec.get("business_status") or biz_rec.get("status"),
+                        sector=biz_rec.get("sector") or biz_rec.get("domain"),
+                        total_project_cost=float(biz_rec.get("total_project_cost") or 250000.0),
+                        own_capital=float(biz_rec.get("own_capital") or record.get("available_capital") or 50000.0),
+                        loan_required=float(biz_rec.get("loan_required") or 200000.0),
                         created_at=datetime.fromisoformat(record["created_at"]),
                         updated_at=datetime.fromisoformat(record["updated_at"]),
                     ),
@@ -201,11 +347,11 @@ async def get_profile(current_user: Dict[str, Any] = Depends(get_current_user)):
     response_model=APIResponse[EntrepreneurProfileResponse],
     summary="Update current user's profile",
 )
-async def update_profile(
+async def patch_profile(
     profile_update: EntrepreneurProfileUpdate,
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
-    user_id = str(current_user.get("sub") or current_user.get("id"))
+    user_id = str(current_user.get("sub") or current_user.get("id") or current_user.get("user_id"))
     db = _get_db()
     now = datetime.now(timezone.utc)
 
@@ -294,6 +440,7 @@ async def create_location(
                         pincode=rec.get("pincode"),
                         latitude=float(rec["latitude"]) if rec.get("latitude") else None,
                         longitude=float(rec["longitude"]) if rec.get("longitude") else None,
+                        rural_or_urban=loc_in.rural_or_urban,
                         created_at=datetime.fromisoformat(rec["created_at"]),
                     ),
                     message="Location saved successfully.",
@@ -310,6 +457,7 @@ async def create_location(
         "pincode": loc_in.pincode,
         "latitude": loc_in.latitude,
         "longitude": loc_in.longitude,
+        "rural_or_urban": loc_in.rural_or_urban,
         "created_at": now,
     }
     _OFFLINE_LOCATIONS[loc_id] = loc_record
@@ -345,6 +493,7 @@ async def get_location(
                         pincode=rec.get("pincode"),
                         latitude=float(rec["latitude"]) if rec.get("latitude") else None,
                         longitude=float(rec["longitude"]) if rec.get("longitude") else None,
+                        rural_or_urban="rural",
                         created_at=datetime.fromisoformat(rec["created_at"]),
                     ),
                 )

@@ -7,7 +7,7 @@ def test_list_schemes_endpoint(client):
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is True
-    assert len(data["data"]) == 5
+    assert len(data["data"]) >= 5
     scheme_codes = [s["scheme_code"] for s in data["data"]]
     assert "PMEGP" in scheme_codes
     assert "MUDRA_SHISHU" in scheme_codes

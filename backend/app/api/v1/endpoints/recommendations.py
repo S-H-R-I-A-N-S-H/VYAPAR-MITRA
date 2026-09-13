@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 import logging
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, Field
 
 from app.adapters.gemini_adapter import GeminiAdapter
@@ -12,9 +12,19 @@ from app.api.v1.endpoints.finance import _OFFLINE_SCENARIOS
 from app.core.errors import ResourceNotFoundException
 from app.core.security import get_current_user
 from app.schemas.common import APIResponse
+from app.schemas.recommendation import (
+    RecommendationRequest,
+    RecommendationRunResponse,
+    SchemeRecommendationItem,
+)
 from app.services.conflict_detector import ConflictDetector
 from app.services.financial_engine import FinancialEngine, FinancialSimulationInput
 from app.services.prompt_service import PromptService
+from app.services.recommendation_service import (
+    RecommendationService,
+    _OFFLINE_REC_RUNS,
+    _OFFLINE_REC_ITEMS,
+)
 from app.services.scheme_matcher import SchemeMatcher, SchemeMatchRequest
 
 logger = logging.getLogger(__name__)
@@ -30,7 +40,71 @@ def _get_db():
 
 
 # ---------------------------------------------------------------------------
-# Schemas
+# Government Scheme Recommendation Endpoints (Step 13)
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/recommendations",
+    response_model=APIResponse[RecommendationRunResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Generate deterministic government scheme recommendations for entrepreneur",
+)
+async def create_scheme_recommendation(
+    payload: Optional[RecommendationRequest] = None,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    user_id = str(current_user.get("sub") or current_user.get("id") or current_user.get("user_id"))
+    req = payload or RecommendationRequest()
+    
+    result = RecommendationService.run_recommendation(user_id=user_id, request=req)
+    
+    return APIResponse(
+        success=True,
+        data=result,
+        message=f"Generated {len(result.recommendations)} government scheme recommendations ({result.eligible_count} eligible).",
+    )
+
+
+@router.get(
+    "/recommendations/latest",
+    response_model=APIResponse[RecommendationRunResponse],
+    summary="Get latest recommendation run for authenticated user",
+)
+async def get_latest_recommendation(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    user_id = str(current_user.get("sub") or current_user.get("id") or current_user.get("user_id"))
+    req = RecommendationRequest()
+    result = RecommendationService.run_recommendation(user_id=user_id, request=req)
+    return APIResponse(
+        success=True,
+        data=result,
+        message="Retrieved latest government scheme recommendations.",
+    )
+
+
+@router.get(
+    "/recommendations/{run_id}",
+    response_model=APIResponse[Dict[str, Any]],
+    summary="Get recommendation run details by run ID",
+)
+async def get_recommendation_run(
+    run_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    rec_data = RecommendationService.get_recommendation_by_id(run_id)
+    if not rec_data:
+        raise ResourceNotFoundException("RecommendationRun", run_id)
+
+    return APIResponse(
+        success=True,
+        data=rec_data,
+        message="Retrieved recommendation run details.",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Full Business Viability Recommendation Synthesis (Retained for Compatibility)
 # ---------------------------------------------------------------------------
 
 class SWOTAnalysis(BaseModel):
@@ -66,10 +140,6 @@ class FinalRecommendationResponse(BaseModel):
     key_evidence_citations: List[str]
     eligible_schemes: List[str]
 
-
-# ---------------------------------------------------------------------------
-# Recommendation Synthesis Endpoint
-# ---------------------------------------------------------------------------
 
 @router.get(
     "/businesses/{business_id}/recommendation",
@@ -146,8 +216,8 @@ async def get_business_recommendation(
             project_cost=project_cost,
             own_capital=own_cap,
             domain=biz_domain,
-            state="Maharashtra",
-            district="Pune",
+            state="Madhya Pradesh",
+            district="Indore",
             category="general",
         )
     )
@@ -155,7 +225,7 @@ async def get_business_recommendation(
         s.official_name for s in scheme_matches if s.eligibility_status in ["eligible", "conditionally_eligible"]
     ]
 
-    # 4. Synthesize Verdict according to Core AI Principles (docs/ai-behaviour.md)
+    # 4. Synthesize Verdict
     if not is_affordable or dscr < 1.0:
         verdict = "CAUTION_FINANCIAL_STRESS"
         rationale = (
@@ -171,7 +241,7 @@ async def get_business_recommendation(
             f"Proceed with a focused, small-batch pilot validation to confirm local customer repeat purchases."
         )
 
-    # 5. Build 4-Week Grounded Action Plan
+    # 5. Build 4-Week Action Plan
     action_plan = [
         ActionPlanMilestone(
             week=1,
