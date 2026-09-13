@@ -186,6 +186,9 @@ class _ConversationalInterviewScreenState
     });
 
     try {
+      if (_sessionId == null) {
+        await _initSessionWithBackend();
+      }
       final sessionId = _sessionId ?? 'offline-session-temp';
       final response = await _apiClient.post(
         ApiEndpoints.interviewVoice(sessionId),
@@ -278,15 +281,20 @@ class _ConversationalInterviewScreenState
     }
   }
 
-  void _sendMessage(String text) async {
+  Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
+
+    final nowTime = DateFormat('hh:mm a').format(DateTime.now());
+    final profile = ref.read(businessProfileProvider);
+    final lang = ref.read(localeProvider).languageCode;
+    final isHindi = lang == 'hi';
 
     setState(() {
       _messages.add(
         ChatMessage(
           text: text.trim(),
           isUser: true,
-          time: '10:43 AM',
+          time: nowTime,
         ),
       );
       _inputController.clear();
@@ -296,40 +304,86 @@ class _ConversationalInterviewScreenState
 
     _scrollToBottom();
 
+    // ── Try live backend (Gemini) ────────────────────────────────────────────
     try {
-      final profile = ref.read(businessProfileProvider);
-      final isHindi = ref.read(localeProvider).languageCode == 'hi';
+      if (_sessionId == null) {
+        await _initSessionWithBackend();
+      }
+      final sessionId = _sessionId ?? 'offline-session-temp';
+      final response = await _apiClient.post(
+        ApiEndpoints.interviewMessages(sessionId),
+        body: {
+          'content': text.trim(),
+          'language': lang,
+        },
+      );
 
-      await Future.delayed(const Duration(milliseconds: 900));
+      if (response != null && response['data'] != null) {
+        final data = response['data'] as Map<String, dynamic>;
+        final reply = (data['reply'] as String?) ?? '';
+        final nextQ = data['next_question'] as String?;
+        final combinedReply =
+            (nextQ != null && nextQ.isNotEmpty) ? '$reply\n\n$nextQ' : reply;
 
-      final aiReply = _turnCount == 1
+        // Build insight badge from extracted_factors if present
+        String? badge;
+        final factors = data['extracted_factors'];
+        if (factors is List && factors.isNotEmpty) {
+          final first = factors.first;
+          if (first is Map && first['factor'] != null) {
+            badge = isHindi
+                ? '✓ ${first["factor"]} पहचाना गया'
+                : '✓ ${first["factor"]} identified';
+          }
+        }
+        badge ??= _turnCount >= 2
+            ? (isHindi ? '35% PMEGP सब्सिडी के लिए पात्र' : 'Eligible for 35% PMEGP subsidy')
+            : (isHindi ? 'स्थानीय मांग सत्यापित' : 'Verified local market demand');
+
+        if (mounted) {
+          setState(() {
+            _isAiResponding = false;
+            _messages.add(
+              ChatMessage(
+                text: combinedReply,
+                isUser: false,
+                time: DateFormat('hh:mm a').format(DateTime.now()),
+                insightBadge: badge,
+              ),
+            );
+          });
+          _scrollToBottom();
+        }
+        return; // ✓ live response handled
+      }
+    } catch (e) {
+      debugPrint('[Interview] Backend call failed: $e — using offline fallback');
+    }
+
+    // ── Offline / sandbox fallback ───────────────────────────────────────────
+    if (mounted) {
+      final fallbackReply = _turnCount == 1
           ? (isHindi
-              ? 'यह बहुत अच्छा हुनर है! आपके क्षेत्र ${profile.block} में कच्चा माल (जैसे सरसों या तिलहन) सीधे किसानों से मिल सकता है या आपके पास भंडारण शेड उपलब्ध है?'
-              : 'That is valuable experience! In your ${profile.block} area, do you have direct access to raw mustard/oilseed crops, or do you have a storage space?')
+              ? 'यह बहुत अच्छा हुनर है! आपके क्षेत्र ${profile.block} में कच्चा माल सीधे किसानों से मिल सकता है। क्या आपके पास भंडारण शेड है?'
+              : 'That is valuable experience! In your ${profile.block} area, do you have direct access to raw crops, or a storage space?')
           : (isHindi
-              ? 'बिल्कुल सही! आपके ₹${(profile.personalCapital / 1000).toStringAsFixed(0)}K निजी बजट और अनुभव के आधार पर हमने 3 अत्यधिक व्यवहार्य अवसर तैयार कर लिए हैं।'
-              : 'Understood! Based on your experience and ₹${(profile.personalCapital / 1000).toStringAsFixed(0)}K capital, we have curated 3 high-viability business opportunities for you.');
+              ? 'बिल्कुल सही! आपके ₹${(profile.personalCapital / 1000).toStringAsFixed(0)}K बजट और अनुभव के आधार पर हमने 3 अवसर तैयार किए हैं।'
+              : 'Understood! Based on your ₹${(profile.personalCapital / 1000).toStringAsFixed(0)}K capital, we have curated 3 high-viability opportunities for you.');
 
-      if (mounted) {
-        setState(() {
-          _isAiResponding = false;
-          _messages.add(
-            ChatMessage(
-              text: aiReply,
-              isUser: false,
-              time: '10:44 AM',
-              insightBadge: _turnCount >= 2
-                  ? 'Eligible for 35% PMEGP subsidy'
-                  : 'Verified local market demand',
-            ),
-          );
-        });
-        _scrollToBottom();
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _isAiResponding = false);
-      }
+      setState(() {
+        _isAiResponding = false;
+        _messages.add(
+          ChatMessage(
+            text: fallbackReply,
+            isUser: false,
+            time: DateFormat('hh:mm a').format(DateTime.now()),
+            insightBadge: _turnCount >= 2
+                ? (isHindi ? '35% PMEGP सब्सिडी के लिए पात्र' : 'Eligible for 35% PMEGP subsidy')
+                : (isHindi ? 'स्थानीय मांग सत्यापित' : 'Verified local market demand'),
+          ),
+        );
+      });
+      _scrollToBottom();
     }
   }
 

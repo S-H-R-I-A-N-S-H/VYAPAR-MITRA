@@ -21,7 +21,9 @@ class ApiClient {
   final http.Client _httpClient;
   String? _authToken;
 
-  ApiClient({http.Client? httpClient}) : _httpClient = httpClient ?? http.Client();
+  ApiClient({http.Client? httpClient, String? authToken})
+      : _httpClient = httpClient ?? http.Client(),
+        _authToken = authToken ?? 'mock-user-dev-user-default';
 
   void setAuthToken(String? token) {
     _authToken = token;

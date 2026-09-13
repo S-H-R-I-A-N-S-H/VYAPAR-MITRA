@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, field_validator
 from app.adapters.bhashini_adapter import BhashiniAdapter
 from app.adapters.gemini_adapter import GeminiAdapter
 from app.adapters.supabase_adapter import supabase_adapter
+from app.core.config import settings
 from app.core.errors import ResourceNotFoundException
 from app.core.security import get_current_user
 from app.schemas.common import APIResponse
@@ -112,13 +113,18 @@ async def create_interview_session(
 
     if db is not None:
         try:
+            try:
+                db_user_id = str(uuid.UUID(user_id))
+            except ValueError:
+                db_user_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, user_id))
+
             # Find entrepreneur_id from user_id if profile exists, or auto-provision baseline profile
-            ent_res = db.table("entrepreneurs").select("id").eq("user_id", user_id).execute()
+            ent_res = db.table("entrepreneurs").select("id").eq("user_id", db_user_id).execute()
             if ent_res.data:
                 entrepreneur_id = str(ent_res.data[0]["id"])
             else:
                 new_ent = db.table("entrepreneurs").insert({
-                    "user_id": user_id,
+                    "user_id": db_user_id,
                     "full_name": "New Entrepreneur",
                     "preferred_language": session_in.language,
                     "available_capital": 0.0,
@@ -216,15 +222,56 @@ async def send_interview_message(
             language = _OFFLINE_SESSIONS.get(session_id, {}).get("language", "hi")
             for m in _OFFLINE_MESSAGES.get(session_id, []):
                 history.append({"role": m["role"].lower(), "content": m["content"]})
+        elif session_id.startswith("offline-") or settings.ENVIRONMENT == "development":
+            _OFFLINE_SESSIONS[session_id] = {
+                "id": session_id,
+                "entrepreneur_id": str(current_user.get("sub") or "dev-user-default"),
+                "language": msg_in.language or "hi",
+            }
+            _OFFLINE_MESSAGES[session_id] = []
+            language = msg_in.language or "hi"
         else:
             raise ResourceNotFoundException("InterviewSession", session_id)
+
+        # Attempt to auto-persist missing session into DB if valid UUID format
+        if db is not None:
+            try:
+                valid_session_uuid = str(uuid.UUID(session_id))
+                user_id_raw = str(current_user.get("sub") or current_user.get("id") or "dev-user-default")
+                try:
+                    db_user_id = str(uuid.UUID(user_id_raw))
+                except ValueError:
+                    db_user_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, user_id_raw))
+
+                ent_res = db.table("entrepreneurs").select("id").eq("user_id", db_user_id).execute()
+                if ent_res.data:
+                    ent_id = str(ent_res.data[0]["id"])
+                else:
+                    new_ent = db.table("entrepreneurs").insert({
+                        "user_id": db_user_id,
+                        "full_name": "New Entrepreneur",
+                        "preferred_language": language,
+                        "available_capital": 0.0,
+                    }).execute()
+                    ent_id = str(new_ent.data[0]["id"]) if new_ent.data else db_user_id
+
+                db.table("interview_sessions").insert({
+                    "id": valid_session_uuid,
+                    "entrepreneur_id": ent_id,
+                    "status": "ACTIVE",
+                    "language": language,
+                    "started_at": now.isoformat(),
+                }).execute()
+                found_in_db = True
+            except Exception as e:
+                logger.debug(f"Auto-heal session in DB skipped: {e}")
 
     # Add current user message to history
     history.append({"role": "user", "content": sanitized_content})
 
     # 2. Persist user message
     user_msg_id = str(uuid.uuid4())
-    if db is not None:
+    if db is not None and found_in_db:
         try:
             db.table("interview_messages").insert({
                 "id": user_msg_id,
@@ -285,7 +332,7 @@ async def send_interview_message(
     asst_msg_id = str(uuid.uuid4())
     asst_content = f"{ai_turn.reply}\n\n{ai_turn.next_question or ''}".strip()
 
-    if db is not None:
+    if db is not None and found_in_db:
         try:
             db.table("interview_messages").insert({
                 "id": asst_msg_id,
@@ -459,6 +506,14 @@ async def process_voice_interview_message(
     if not found:
         if session_id in _OFFLINE_SESSIONS:
             session_lang = _OFFLINE_SESSIONS[session_id].get("language") or session_lang
+        elif session_id.startswith("offline-") or settings.ENVIRONMENT == "development":
+            _OFFLINE_SESSIONS[session_id] = {
+                "id": session_id,
+                "entrepreneur_id": str(current_user.get("sub") or "dev-user-default"),
+                "language": voice_in.language or "hi",
+            }
+            _OFFLINE_MESSAGES[session_id] = []
+            session_lang = voice_in.language or "hi"
         else:
             raise ResourceNotFoundException("InterviewSession", session_id)
 

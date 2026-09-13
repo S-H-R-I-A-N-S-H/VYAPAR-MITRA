@@ -12,6 +12,23 @@ class AuthenticatedUser(BaseModel):
     role: str = "authenticated"
     claims: Dict[str, Any] = Field(default_factory=dict)
 
+    def get(self, key: str, default: Any = None) -> Any:
+        if key in ("sub", "id", "user_id"):
+            return self.user_id
+        if key == "email":
+            return self.email
+        if key == "role":
+            return self.role
+        if key in self.claims:
+            return self.claims[key]
+        return getattr(self, key, default)
+
+    def __getitem__(self, key: str) -> Any:
+        val = self.get(key)
+        if val is None and key not in ("sub", "id", "user_id", "email", "role"):
+            raise KeyError(key)
+        return val
+
 
 async def get_current_user(
     authorization: Optional[str] = Header(None, description="Bearer <Supabase JWT>"),
@@ -21,10 +38,24 @@ async def get_current_user(
     Enforces expiration check, signature integrity, and dev-mock scoping.
     """
     if not authorization:
+        if settings.ENVIRONMENT == "development" and getattr(settings, "DEV_ALLOW_ANONYMOUS", False):
+            return AuthenticatedUser(
+                user_id="dev-user-default",
+                email="dev-user-default@vyaparmitra.dev",
+                role="authenticated",
+                claims={"sub": "dev-user-default", "mock": True},
+            )
         raise UnauthorizedAccessException("Missing Authorization header.")
 
     scheme, _, token = authorization.partition(" ")
     if scheme.lower() != "bearer" or not token:
+        if settings.ENVIRONMENT == "development" and getattr(settings, "DEV_ALLOW_ANONYMOUS", False):
+            return AuthenticatedUser(
+                user_id="dev-user-default",
+                email="dev-user-default@vyaparmitra.dev",
+                role="authenticated",
+                claims={"sub": "dev-user-default", "mock": True},
+            )
         raise UnauthorizedAccessException("Authorization header must follow 'Bearer <token>' format.")
 
     # Mock dev tokens are strictly restricted to development environments

@@ -62,6 +62,23 @@ class MapplsAdapter:
             logger.warning(f"Failed to obtain Mappls access token: {e}")
             return None
 
+    # Known block/district coordinates for Madhya Pradesh (offline fallback)
+    _MP_COORDS: Dict[str, tuple] = {
+        "sanwer": (22.9772, 75.8078),
+        "sawer": (22.9772, 75.8078),
+        "indore": (22.7196, 75.8577),
+        "bhopal": (23.2599, 77.4126),
+        "ujjain": (23.1765, 75.7885),
+        "dewas": (22.9676, 76.0534),
+        "huzur": (23.1910, 77.4750),
+        "sehore": (23.2013, 77.0849),
+        "mandsaur": (24.0728, 75.0701),
+        "ratlam": (23.3315, 75.0367),
+        "neemuch": (24.4747, 74.8699),
+        "gwalior": (26.2183, 78.1828),
+        "jabalpur": (23.1815, 79.9864),
+    }
+
     async def geocode(self, query: str) -> List[Dict[str, Any]]:
         """
         Resolves location text (village, block, district) to geographical coordinates.
@@ -76,6 +93,7 @@ class MapplsAdapter:
             if token:
                 try:
                     async with httpx.AsyncClient(timeout=8.0) as client:
+                        # Use Mappls geocode to get address text
                         resp = await client.get(
                             self.GEOCODE_URL,
                             params={"address": cleaned_query},
@@ -83,20 +101,56 @@ class MapplsAdapter:
                         )
                         if resp.status_code == 200:
                             data = resp.json()
-                            cop_results = data.get("copResults", [])
-                            if cop_results:
-                                normalized: List[Dict[str, Any]] = []
-                                for item in cop_results:
-                                    normalized.append({
-                                        "village": item.get("subDistrict") or item.get("village") or cleaned_query,
-                                        "district": item.get("district") or "Pune",
-                                        "state": item.get("state") or "Maharashtra",
-                                        "pincode": str(item.get("pincode") or "411001"),
-                                        "latitude": float(item.get("latitude", 18.5204)),
-                                        "longitude": float(item.get("longitude", 73.8567)),
-                                        "formatted_address": item.get("formattedAddress") or cleaned_query,
-                                    })
-                                return normalized
+                            cop = data.get("copResults")
+                            if cop and isinstance(cop, dict):
+                                district_raw = cop.get("district") or cop.get("city") or "Indore"
+                                district = district_raw.replace(" District", "").strip()
+                                sub_dist = cop.get("subDistrict") or cop.get("village") or cleaned_query
+                                state = cop.get("state") or "Madhya Pradesh"
+                                pincode = str(cop.get("pincode") or "")
+
+                                # Resolve lat/lon: check known table first
+                                lat, lon = 22.9772, 75.8078  # Sanwer default
+                                for key, coords in self._MP_COORDS.items():
+                                    if key in sub_dist.lower() or key in cleaned_query.lower():
+                                        lat, lon = coords
+                                        break
+                                else:
+                                    # Fallback: search nearby with location name
+                                    try:
+                                        s_resp = await client.get(
+                                            "https://atlas.mappls.com/api/places/search/json",
+                                            params={"query": sub_dist, "radius": "50000"},
+                                            headers={"Authorization": f"Bearer {token}"},
+                                        )
+                                        if s_resp.status_code == 200:
+                                            locs = s_resp.json().get("suggestedLocations", [])
+                                            if locs:
+                                                # Use nearby endpoint to get coords for the eLoc
+                                                eloc = locs[0].get("eLoc", "")
+                                                if eloc:
+                                                    n_resp = await client.get(
+                                                        self.NEARBY_URL,
+                                                        params={"keywords": "area", "refLocation": eloc, "radius": 100},
+                                                        headers={"Authorization": f"Bearer {token}"},
+                                                    )
+                                                    if n_resp.status_code == 200:
+                                                        nlocs = n_resp.json().get("suggestedLocations", [])
+                                                        if nlocs and nlocs[0].get("latitude"):
+                                                            lat = float(nlocs[0]["latitude"])
+                                                            lon = float(nlocs[0]["longitude"])
+                                    except Exception:
+                                        pass
+
+                                return [{
+                                    "village": sub_dist,
+                                    "district": district,
+                                    "state": state,
+                                    "pincode": pincode,
+                                    "latitude": lat,
+                                    "longitude": lon,
+                                    "formatted_address": cop.get("formattedAddress") or cleaned_query,
+                                }]
                         else:
                             logger.warning(f"Mappls geocode returned HTTP {resp.status_code}")
                 except Exception as e:
