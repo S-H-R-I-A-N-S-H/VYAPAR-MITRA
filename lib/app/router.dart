@@ -15,6 +15,7 @@ import '../features/validation/screens/validation_dashboard_screen.dart';
 class AppRouter {
   static const String welcome = '/';
   static const String language = '/language';
+  static const String logbook = '/logbook';
   static const String profile = '/profile';
   static const String interview = '/interview';
   static const String opportunities = '/opportunities';
