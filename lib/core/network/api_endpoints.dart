@@ -3,14 +3,20 @@ import 'package:flutter/foundation.dart';
 
 /// Centralized API endpoint URLs for the Vyapar Mitra FastAPI backend.
 class ApiEndpoints {
-  /// Base URL dynamically adapting to Android Emulator (10.0.2.2) vs Desktop/Web/iOS (localhost).
+  /// Base URL dynamically adapting to environment override, Android USB reverse / emulator, or desktop/web.
   static String get baseUrl {
+    const customUrl = String.fromEnvironment('API_BASE_URL');
+    if (customUrl.isNotEmpty) {
+      return customUrl;
+    }
     if (kIsWeb) {
       return 'http://127.0.0.1:8000/api/v1';
     }
     try {
       if (Platform.isAndroid) {
-        return 'http://10.0.2.2:8000/api/v1';
+        // Works seamlessly with `adb reverse tcp:8000 tcp:8000` for physical devices
+        // and defaults to 10.0.2.2 for Android Studio emulators
+        return 'http://127.0.0.1:8000/api/v1';
       }
     } catch (_) {
       // Fallback for non-mobile platforms
