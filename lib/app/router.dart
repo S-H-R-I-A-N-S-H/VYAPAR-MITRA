@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../features/business/screens/business_confirmation_screen.dart';
 import '../features/finance/screens/financial_scenario_screen.dart';
+import '../features/finance/screens/loan_repayment_screen.dart';
 import '../features/interview/screens/conversational_interview_screen.dart';
 import '../features/onboarding/screens/language_selection_screen.dart';
 import '../features/onboarding/screens/welcome_screen.dart';
@@ -20,6 +21,7 @@ class AppRouter {
   static const String researchProgress = '/research-progress';
   static const String validationDashboard = '/validation-dashboard';
   static const String financeModeler = '/finance-modeler';
+  static const String loanPlanner = '/loan-planner';
   static const String actionPlan = '/action-plan';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -42,6 +44,8 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const ValidationDashboardScreen());
       case financeModeler:
         return MaterialPageRoute(builder: (_) => const FinancialScenarioScreen());
+      case loanPlanner:
+        return MaterialPageRoute(builder: (_) => const LoanRepaymentScreen());
       case actionPlan:
         return MaterialPageRoute(builder: (_) => const ActionPlanScreen());
       default:

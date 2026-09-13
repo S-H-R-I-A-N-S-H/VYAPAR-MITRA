@@ -182,6 +182,62 @@ class DeterministicFinancialCalculator {
     return double.parse(emi.toStringAsFixed(2));
   }
 
+  /// Generates month-by-month reducing balance amortization schedule.
+  /// Matches backend FinancialEngine reducing-balance formula.
+  static List<AmortizationScheduleItem> generateAmortizationSchedule({
+    required double principal,
+    required double annualRatePct,
+    required int tenureMonths,
+    double? emiOverride,
+    int? maxMonths,
+  }) {
+    final items = <AmortizationScheduleItem>[];
+    if (principal <= 0 || tenureMonths <= 0) return items;
+
+    final monthlyRate = (annualRatePct / 100.0) / 12.0;
+    final emi = emiOverride ??
+        calculateEmi(
+          principal: principal,
+          annualRatePct: annualRatePct,
+          tenureMonths: tenureMonths,
+        );
+    var currentBalance = principal;
+    final limit = maxMonths != null ? math.min(tenureMonths, maxMonths) : tenureMonths;
+
+    for (int m = 1; m <= limit; m++) {
+      final interest = annualRatePct > 0
+          ? double.parse((currentBalance * monthlyRate).toStringAsFixed(2))
+          : 0.0;
+      final double principalPaid;
+      if (m == tenureMonths) {
+        principalPaid = double.parse(currentBalance.toStringAsFixed(2));
+      } else {
+        principalPaid = double.parse(
+          math.min(emi - interest, currentBalance).toStringAsFixed(2),
+        );
+      }
+      final closingBalance = double.parse(
+        math.max(0.0, currentBalance - principalPaid).toStringAsFixed(2),
+      );
+
+      items.add(
+        AmortizationScheduleItem(
+          month: m,
+          openingBalance: double.parse(currentBalance.toStringAsFixed(2)),
+          emi: double.parse((principalPaid + interest).toStringAsFixed(2)),
+          principal: principalPaid,
+          interest: interest,
+          closingBalance: closingBalance,
+        ),
+      );
+
+      currentBalance = closingBalance;
+      if (currentBalance <= 0.001) break;
+    }
+
+    return items;
+  }
+
   /// Calculates authoritative deterministic fallback simulation without network.
   static FinancialSimulationResult computeLocalFallback({
     required double totalProjectCost,
@@ -227,6 +283,14 @@ class DeterministicFinancialCalculator {
       rationale = 'Healthy debt coverage (DSCR ${dscr.toStringAsFixed(2)}). Net surplus after EMI is ₹${netCashFlow.toStringAsFixed(0)} per month.';
     }
 
+    final preview = generateAmortizationSchedule(
+      principal: requiredLoan,
+      annualRatePct: annualRatePct,
+      tenureMonths: tenureMonths,
+      emiOverride: monthlyEmi,
+      maxMonths: 6,
+    );
+
     return FinancialSimulationResult(
       totalProjectCost: totalProjectCost,
       ownCapital: ownCapital,
@@ -240,6 +304,7 @@ class DeterministicFinancialCalculator {
       isAffordable: isAffordable,
       affordabilityRiskLevel: riskLevel,
       affordabilityRationale: rationale,
+      amortizationPreview: preview,
     );
   }
 }
