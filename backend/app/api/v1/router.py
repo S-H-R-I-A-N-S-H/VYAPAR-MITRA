@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     businesses,
     evidence,
+    feasibility,
     finance,
     health,
     interview,
@@ -22,6 +23,7 @@ api_v1_router.include_router(profile.router, tags=["Profile & Location"])
 api_v1_router.include_router(interview.router, tags=["Conversational Interview"])
 api_v1_router.include_router(opportunities.router, tags=["Opportunity Discovery"])
 api_v1_router.include_router(businesses.router, tags=["Businesses"])
+api_v1_router.include_router(feasibility.router, tags=["Business Feasibility"])
 api_v1_router.include_router(recommendations.router, tags=["Recommendations"])
 api_v1_router.include_router(research.router, tags=["Research"])
 api_v1_router.include_router(surveys.router, tags=["Surveys"])
