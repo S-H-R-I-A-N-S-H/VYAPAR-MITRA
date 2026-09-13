@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../auth/auth_notifier.dart';
+import '../auth/auth_state.dart';
 import '../network/api_client.dart';
 
+/// Provider for authentication session and token management.
+final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+  return AuthNotifier();
+});
+
 /// Provider for the global ApiClient instance.
+/// Automatically injects the active authentication token from authProvider.
 final apiClientProvider = Provider<ApiClient>((ref) {
-  final client = ApiClient();
+  final authState = ref.watch(authProvider);
+  final client = ApiClient(authToken: authState.token);
   ref.onDispose(() => client.close());
   return client;
 });
@@ -80,6 +89,10 @@ class BusinessProfileNotifier extends StateNotifier<BusinessProfileState> {
 
   void updateProfile(BusinessProfileState updated) {
     state = updated;
+  }
+
+  void setProfileId(String id) {
+    state = state.copyWith(profileId: id);
   }
 
   void setCapital(double amount) {

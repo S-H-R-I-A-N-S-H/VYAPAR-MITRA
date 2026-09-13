@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/api_endpoints.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -52,7 +53,7 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
   Future<void> _handleSaveAndContinue() async {
     setState(() => _isLoading = true);
 
-    // Update Riverpod state
+    // Update Riverpod state optimistically with form selections
     final updatedProfile = ref.read(businessProfileProvider).copyWith(
           fullName: _nameController.text.trim(),
           startingPosition: _startingPosition,
@@ -64,31 +65,51 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
         );
     ref.read(businessProfileProvider.notifier).updateProfile(updatedProfile);
 
-    // Attempt backend save via ApiClient
+    // Save profile to backend via ApiClient matching EntrepreneurProfileCreate contract
     try {
       final apiClient = ref.read(apiClientProvider);
-      // Create profile payload
-      await apiClient.post(
-        'http://127.0.0.1:8000/api/v1/profile',
-        body: {
-          'full_name': _nameController.text.trim(),
-          'phone_number': '9876543210',
-          'district': _district,
-          'block': _block,
+      final payload = {
+        'full_name': _nameController.text.trim(),
+        'preferred_language': ref.read(localeProvider).languageCode,
+        'voice_enabled': true,
+        'location': {
           'state': 'Madhya Pradesh',
-          'primary_language': ref.read(localeProvider).languageCode,
-          'available_capital': _capital,
-          'education_level': '10th_pass',
-          'primary_skill': 'machinery',
+          'district': _district,
+          'town_or_village': _block,
         },
+        'available_capital': _capital,
+        'skills': <String>['machinery'],
+        'interests': <String>[],
+        'risk_preference': 'moderate',
+        'scheme_category': _socialCategory,
+        'consent_recorded': true,
+      };
+
+      final res = await apiClient.post(
+        ApiEndpoints.profile,
+        body: payload,
       );
-    } catch (e) {
-      debugPrint('Profile sync sandbox fallback: $e');
-      // Graceful sandbox fallback: local state updated
-    } finally {
+
+      // Extract server-assigned entrepreneur profile UUID and persist in Riverpod
+      if (res != null && res is Map && res['data'] != null && res['data']['id'] != null) {
+        final profileId = res['data']['id'].toString();
+        ref.read(businessProfileProvider.notifier).setProfileId(profileId);
+      }
+
       if (mounted) {
         setState(() => _isLoading = false);
         Navigator.pushNamed(context, '/interview');
+      }
+    } catch (e) {
+      debugPrint('Profile creation failed: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save profile: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
       }
     }
   }

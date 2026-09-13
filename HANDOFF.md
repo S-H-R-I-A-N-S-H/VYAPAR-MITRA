@@ -405,7 +405,7 @@ flutter test
 1. **Client Identity:** In full deployment, Flutter authenticates with Supabase Auth (via mobile phone OTP) and receives a signed JWT.
 2. **Server Enforcement:** Every API request transmits the JWT in the `Authorization: Bearer <token>` header.
 3. **Middleware Guard:** [core/security.py](file:///c:/VM/backend/app/core/security.py) decodes the JWT using `SUPABASE_JWT_SECRET` and extracts `current_user["id"]`.
-4. **Development Sandbox Bypass:** In development mode (`ENVIRONMENT=development`), if no token is passed, the backend automatically uses a mock authenticated user `dev-test-user-001` so teammates can test endpoints in Swagger without logging in!
+4. **Development Authentication Guard:** In development mode (`ENVIRONMENT=development`), [core/security.py](file:///c:/VM/backend/app/core/security.py) strictly verifies that an `Authorization` header is present. If the header is missing, FastAPI returns HTTP 401 Unauthorized (`Missing Authorization header`). When a development Bearer token (such as `mock-user-dev-001` or matching `mock-user-*`) is passed, `get_current_user` injects the development test user (`dev-test-user-001`). The Flutter client automatically manages this via `authProvider`, providing seamless authenticated calls out-of-the-box in local development.
 
 ---
 
@@ -421,20 +421,54 @@ We have established the complete architectural backbone, deterministic domain en
    - Configured 11 modular endpoint groups under `/api/v1`.
    - Built deterministic mathematical services for Capex, Working Capital, EMI, DSCR, and Scheme Matching.
    - Built conflict detection logic to reconcile survey data with secondary market data.
-2. **Robust Test Suite (19 Test Modules):**
+2. **Robust Test Suite (19 Backend Test Modules + 22 Flutter Test Suites):**
    - 7 unit test suites covering all business logic engines.
    - 10 API route test suites verifying HTTP status codes and Pydantic validation.
+   - 22 Flutter unit, widget, and integration tests verifying client lifecycle, token propagation, profile contract adherence, and screen flows.
 3. **Flutter Material 3 Mobile Application:**
    - 10 structured feature modules and screens covering the entire user journey.
    - High-contrast, accessible rural theme palette.
-   - Configured centralized networking layer with adaptive Android IP handling.
+   - Configured centralized networking layer with adaptive Android IP handling and active JWT injection.
 4. **Database & Schema Design:**
    - Comprehensive PostgreSQL migration with 11 relational tables and Row Level Security policies.
 5. **Exhaustive Documentation Suite (`docs/`):**
    - 10 authoritative specification documents covering Product, Architecture, API Contracts, Database, AI Prompting, Security, UX, Testing, and Development.
+6. **Task 1 Backend Foundation (Complete & Frozen):**
+   - Implemented and committed on branch `financial-calculator` (`feat(backend): implement profile-to-business foundation`).
+   - Architectural chain established:
+     ```
+     Authenticated User ──▶ Entrepreneur Profile (id) ──▶ Business (real business_id)
+     ```
+   - Endpoints updated: [profile.py](file:///c:/VM/backend/app/api/v1/endpoints/profile.py), [businesses.py](file:///c:/VM/backend/app/api/v1/endpoints/businesses.py), and [opportunities.py](file:///c:/VM/backend/app/api/v1/endpoints/opportunities.py).
+   - Verified with backend pytest suites.
+7. **Phase 1: Frontend Authentication & Token Propagation (Complete & Verified):**
+   - Created `lib/core/auth/auth_state.dart` and `lib/core/auth/auth_notifier.dart`.
+   - Connected `authProvider` to `apiClientProvider` to dynamically pass the active token via `Authorization: Bearer <token>`.
+   - Initialized default development token `mock-user-dev-001` matching backend dev authentication requirements.
+   - Verified resolution of the previous HTTP 401 Unauthorized (`Missing Authorization header`) error with 7 dedicated automated tests.
+8. **Phase 2: Profile Contract Alignment & Persistence (Complete & Verified):**
+   - Aligned Flutter `BusinessProfileScreen` request body with backend `EntrepreneurProfileCreate` Pydantic schema in [schemas/profile.py](file:///c:/VM/backend/app/schemas/profile.py):
+     - Formed nested `LocationCreate` object: `state`, `district`, `town_or_village` (mapped from form block).
+     - Aligned field naming: `preferred_language` (from `localeProvider`), `available_capital`, `voice_enabled: true`.
+     - Structured skills and interests as typed lists: `skills: ['machinery']`, `interests: []`.
+     - Included affirmative action parameters: `scheme_category` (from form) and `consent_recorded: true`.
+     - Removed legacy flat/deprecated fields (`phone_number`, `education_level`, `primary_skill`, `primary_language`).
+   - Replaced hardcoded URL `http://127.0.0.1:8000/api/v1/profile` with centralized [ApiEndpoints.profile](file:///c:/VM/lib/core/network/api_endpoints.dart).
+   - Extracted server-assigned entrepreneur profile UUID (`data.id`) from the HTTP 201 response and stored it into Riverpod via `businessProfileProvider.notifier.setProfileId(profileId)`.
+   - Removed silent error swallowing: added error SnackBar feedback (`Failed to save profile: $e`), preserving user inputs on error and preventing unintended screen transition.
+   - Added automated integration tests in [test/features/profile_integration_test.dart](file:///c:/VM/test/features/profile_integration_test.dart) (3/3 passing), bringing the Flutter test suite to 22/22 passing.
+
+### 7.2 Integration Phase Status Summary
+
+| Phase | Description | Status | Verification & Evidence |
+|---|---|---|---|
+| **Task 1 Backend** | Profile → Business Foundation (`user_id` → `profile_id` → `business_id`) | **COMPLETE (Frozen)** | Backend pytest suite passes; committed on branch `financial-calculator` |
+| **Phase 1** | Frontend Auth & Token Propagation (`authProvider` → `apiClientProvider`) | **COMPLETE** | 7 automated tests pass (`test/core/auth_integration_test.dart`); HTTP 401 resolved |
+| **Phase 2** | Profile Contract Alignment & State Persistence (`EntrepreneurProfileCreate` → `setProfileId`) | **COMPLETE** | 3 integration tests pass (`test/features/profile_integration_test.dart`); all 22 Flutter tests pass; HTTP 422 resolved |
+| **Phase 3** | Business Creation & Real `business_id` Propagation | **NOT STARTED** | Next to execute |
+| **Phase 4** | Financial Engine & Scenario Integration | **NOT STARTED** | To execute after Phase 3 |
 
 ---
-
 
 ### 7.3 What Is Missing / Mocked (The Major Remaining Chunk)
 
