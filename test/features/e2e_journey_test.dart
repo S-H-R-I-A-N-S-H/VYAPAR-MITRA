@@ -8,7 +8,7 @@ void main() {
   group('Vyapar Mitra Complete E2E User Journey', () {
     testWidgets('Traverses full 10-screen flow from Welcome to Action Plan',
         (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.physicalSize = const Size(800, 1400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -19,92 +19,142 @@ void main() {
             title: 'Vyapar Mitra',
             theme: AppTheme.lightTheme,
             initialRoute: AppRouter.welcome,
-            routes: AppRouter.routes,
+            onGenerateRoute: AppRouter.generateRoute,
           ),
         ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
+      // ==========================================
       // --- 1. Welcome Screen ---
+      // ==========================================
       expect(find.text('VYAPAR MITRA'), findsWidgets);
       expect(find.text('Turn Your Business Idea Into Reality'), findsOneWidget);
       expect(find.text('Get Started'), findsOneWidget);
 
+      await tester.ensureVisible(find.text('Get Started'));
       await tester.tap(find.text('Get Started'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
+      // ==========================================
       // --- 2. Language Selection Screen ---
+      // ==========================================
       expect(find.text('Choose Your Language'), findsOneWidget);
       expect(find.text('Continue'), findsOneWidget);
 
+      await tester.ensureVisible(find.text('Continue'));
       await tester.tap(find.text('Continue'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
+      // ==========================================
       // --- 3. Business Profile Screen ---
-      expect(find.text('Your Business Situation'), findsOneWidget);
-      expect(find.text('Starting a New Idea'), findsOneWidget);
+      // ==========================================
+      expect(find.text('BUSINESS SITUATION'), findsOneWidget);
+      expect(find.text('I have a specific idea'), findsOneWidget);
       expect(find.text('Continue to AI Interview'), findsOneWidget);
 
+      await tester.ensureVisible(find.text('Continue to AI Interview'));
       await tester.tap(find.text('Continue to AI Interview'));
+      // Handle async backend save call with fallback
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
       await tester.pump(const Duration(milliseconds: 400));
 
+      // ==========================================
       // --- 4. Conversational Interview Screen ---
-      expect(find.text('AI Discovery Session'), findsOneWidget);
-      expect(find.text('View Tailored Opportunities'), findsOneWidget);
+      // ==========================================
+      expect(find.text('Business Advisor AI'), findsOneWidget);
+      expect(find.text('Direct farm access'), findsOneWidget);
 
-      await tester.tap(find.text('View Tailored Opportunities'));
+      // Tap quick reply chip to trigger advisor response
+      await tester.tap(find.text('Direct farm access'));
+      await tester.pump();
+      // Pump past advisor deliberation delay (900ms)
+      await tester.pump(const Duration(milliseconds: 1100));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Discover Opportunities →'), findsOneWidget);
+      await tester.ensureVisible(find.text('Discover Opportunities →'));
+      await tester.tap(find.text('Discover Opportunities →'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
+      // ==========================================
       // --- 5. Curated Opportunities Screen ---
-      expect(find.text('Curated Opportunities'), findsOneWidget);
-      expect(find.text('Select & Validate Business'), findsWidgets);
+      // ==========================================
+      expect(find.text('Curated Business Opportunities'), findsOneWidget);
+      expect(find.text('Confirm Selected Business →'), findsOneWidget);
 
-      await tester.tap(find.text('Select & Validate Business').first);
+      await tester.ensureVisible(find.text('Confirm Selected Business →'));
+      await tester.tap(find.text('Confirm Selected Business →'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
+      // ==========================================
       // --- 6. Business Confirmation Checkpoint ---
-      expect(find.text('Confirm Selected Opportunity'), findsOneWidget);
-      expect(find.text('Proceed to Market Research'), findsOneWidget);
+      // ==========================================
+      expect(find.text('Confirm Your Business Idea'), findsOneWidget);
+      expect(find.text('Confirm & Begin Market Research →'), findsOneWidget);
 
-      await tester.tap(find.text('Proceed to Market Research'));
+      await tester.ensureVisible(find.text('Confirm & Begin Market Research →'));
+      await tester.tap(find.text('Confirm & Begin Market Research →'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
+      // ==========================================
       // --- 7. Research Step Progress Screen ---
-      expect(find.text('LIVE MARKET RESEARCH'), findsOneWidget);
-      expect(find.text('View Validation Report'), findsOneWidget);
+      // ==========================================
+      expect(find.text('LIVE MARKET FINDING'), findsOneWidget);
+      expect(find.text('View Validation Dashboard →'), findsOneWidget);
 
-      await tester.tap(find.text('View Validation Report'));
+      await tester.ensureVisible(find.text('View Validation Dashboard →'));
+      await tester.tap(find.text('View Validation Dashboard →'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
+      // ==========================================
       // --- 8. Validation Dashboard Screen ---
-      expect(find.text('VALIDATION DASHBOARD'), findsOneWidget);
-      expect(find.text('Explore Financial Scenarios'), findsOneWidget);
+      // ==========================================
+      expect(find.text('Validation Dashboard'), findsOneWidget);
+      expect(find.text('6 Validation Pillars'), findsOneWidget);
+      expect(find.text('Simulate Financials & What-If →'), findsOneWidget);
 
-      await tester.tap(find.text('Explore Financial Scenarios'));
+      await tester.ensureVisible(find.text('Simulate Financials & What-If →'));
+      await tester.tap(find.text('Simulate Financials & What-If →'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
+      // ==========================================
       // --- 9. Financial Scenario Screen ---
-      expect(find.text('FINANCIAL VIABILITY'), findsOneWidget);
-      expect(find.text('View Final Recommendation'), findsOneWidget);
+      // ==========================================
+      expect(find.text('Financial Planning'), findsOneWidget);
+      expect(find.text('NET CASH IN HAND'), findsOneWidget);
+      expect(find.text('View Final Action Plan & Milestones →'), findsOneWidget);
 
-      await tester.tap(find.text('View Final Recommendation'));
+      await tester.ensureVisible(find.text('View Final Action Plan & Milestones →'));
+      await tester.tap(find.text('View Final Action Plan & Milestones →'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
+      // ==========================================
       // --- 10. Action Plan Screen ---
-      expect(find.text('PROCEED TO LAUNCH (GO)'), findsOneWidget);
-      expect(find.text('Comprehensive Business Recommendation'), findsOneWidget);
-      expect(find.text('4-Week Launch Checklist'), findsOneWidget);
-      expect(find.text('Return to Dashboard / Home'), findsOneWidget);
+      // ==========================================
+      expect(find.text('Validated Strategy • Green Light'), findsOneWidget);
+      expect(find.text('Start with a 100 kg/day Mini-Pilot'), findsOneWidget);
+      expect(find.text('4-Week Milestone Checklist'), findsOneWidget);
+      expect(find.text('Back to Home'), findsOneWidget);
+
+      // Return home
+      await tester.ensureVisible(find.text('Back to Home'));
+      await tester.tap(find.text('Back to Home'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // Back to Welcome Screen
+      expect(find.text('Turn Your Business Idea Into Reality'), findsOneWidget);
     });
   });
 }
