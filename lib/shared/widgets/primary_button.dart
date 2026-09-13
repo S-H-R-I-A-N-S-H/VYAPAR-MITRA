@@ -7,6 +7,8 @@ class PrimaryButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool isLoading;
   final IconData? icon;
+  final Color? backgroundColor;
+  final Color? textColor;
 
   const PrimaryButton({
     super.key,
@@ -14,37 +16,45 @@ class PrimaryButton extends StatelessWidget {
     required this.onPressed,
     this.isLoading = false,
     this.icon,
+    this.backgroundColor,
+    this.textColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 52,
+      height: 54,
       width: double.infinity,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          elevation: 0,
+          backgroundColor: backgroundColor ?? AppColors.primary,
+          foregroundColor: textColor ?? Colors.white,
+          elevation: 1,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
         child: isLoading
             ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                height: 22,
+                width: 22,
+                child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
               )
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  Text(
+                    label,
+                    style: AppTypography.labelLarge.copyWith(
+                      color: textColor ?? Colors.white,
+                      fontSize: 15,
+                    ),
+                  ),
                   if (icon != null) ...[
-                    Icon(icon, size: 20),
                     const SizedBox(width: 8),
+                    Icon(icon, size: 18, color: textColor ?? Colors.white),
                   ],
-                  Text(label, style: AppTypography.labelLarge.copyWith(color: Colors.white)),
                 ],
               ),
       ),
