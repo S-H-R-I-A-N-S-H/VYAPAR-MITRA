@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/api_endpoints.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -9,11 +10,101 @@ import '../../../shared/widgets/vyapar_top_app_bar.dart';
 
 /// Screen 6: Mobile Business Confirmation Checkpoint
 /// Stitch Reference: Screen f8dba77a7ba9476eb463d64e2e751e9a
-class BusinessConfirmationScreen extends ConsumerWidget {
+class BusinessConfirmationScreen extends ConsumerStatefulWidget {
   const BusinessConfirmationScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BusinessConfirmationScreen> createState() =>
+      _BusinessConfirmationScreenState();
+}
+
+class _BusinessConfirmationScreenState
+    extends ConsumerState<BusinessConfirmationScreen> {
+  bool _isLoading = false;
+
+  Future<void> _handleConfirmAndProceed() async {
+    if (_isLoading) return;
+
+    final business = ref.read(selectedBusinessProvider);
+    final profile = ref.read(businessProfileProvider);
+
+    // If business is already created and has real server businessId, avoid duplicate creation
+    if (business.businessId != null && business.businessId!.isNotEmpty) {
+      ref.read(selectedBusinessProvider.notifier).setStatus('VALIDATING');
+      Navigator.pushNamed(context, '/research-progress');
+      return;
+    }
+
+    // Guard: Verify profile dependency from Phase 2
+    if (profile.profileId == null || profile.profileId!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Entrepreneur profile not found. Please complete profile setup first.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final isHindi = ref.read(localeProvider).languageCode == 'hi';
+
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final payload = {
+        'name': business.title,
+        'domain': business.domain,
+        'product_or_service': business.title,
+        'business_model': 'Direct retail & local haat distribution',
+        'description':
+            '${business.title} located in ${profile.block}, ${profile.district}',
+        'target_customer': isHindi
+            ? 'गाँव के परिवार, साप्ताहिक हाट और ग्रामीण किराना स्टोर'
+            : 'Local village households, weekly haat vendors & grocery stores',
+        'intended_market':
+            '${profile.block} Block, ${profile.district} (~10 km radius)',
+        'scale': 'micro',
+      };
+
+      final res = await apiClient.post(
+        ApiEndpoints.businesses,
+        body: payload,
+      );
+
+      // Extract server-generated business ID and persist in Riverpod
+      if (res != null &&
+          res is Map &&
+          res['data'] != null &&
+          res['data']['id'] != null) {
+        final serverBusinessId = res['data']['id'].toString();
+        ref.read(selectedBusinessProvider.notifier).setBusinessId(serverBusinessId);
+        ref.read(selectedBusinessProvider.notifier).setStatus('VALIDATING');
+
+        if (mounted) {
+          setState(() => _isLoading = false);
+          Navigator.pushNamed(context, '/research-progress');
+        }
+      } else {
+        throw Exception('Invalid response structure from server.');
+      }
+    } catch (e) {
+      debugPrint('Business creation failed: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to create business: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final isHindi = ref.watch(localeProvider).languageCode == 'hi';
     final business = ref.watch(selectedBusinessProvider);
     final profile = ref.watch(businessProfileProvider);
@@ -193,10 +284,8 @@ class BusinessConfirmationScreen extends ConsumerWidget {
                 label: isHindi
                     ? 'पुष्टि करें और बाजार जांच शुरू करें'
                     : 'Confirm & Begin Market Research →',
-                onPressed: () {
-                  ref.read(selectedBusinessProvider.notifier).setStatus('VALIDATING');
-                  Navigator.pushNamed(context, '/research-progress');
-                },
+                isLoading: _isLoading,
+                onPressed: _handleConfirmAndProceed,
               ),
 
               const SizedBox(height: 10),

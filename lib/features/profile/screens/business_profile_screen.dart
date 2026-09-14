@@ -23,12 +23,27 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
   late TextEditingController _ideaController;
   late TextEditingController _nameController;
   double _capital = 60000;
-  String _district = 'Indore';
-  String _block = 'Sanwer';
+  String _district = '';
+  String _block = '';
   String _socialCategory = 'general';
   bool _isLoading = false;
 
   final List<double> _capitalPresets = [25000, 50000, 100000, 200000];
+
+  /// Madhya Pradesh districts for dropdown
+  static const List<String> _mpDistricts = [
+    'Agar Malwa', 'Alirajpur', 'Anuppur', 'Ashoknagar', 'Balaghat',
+    'Barwani', 'Betul', 'Bhind', 'Bhopal', 'Burhanpur',
+    'Chhatarpur', 'Chhindwara', 'Damoh', 'Datia', 'Dewas',
+    'Dhar', 'Dindori', 'Guna', 'Gwalior', 'Harda',
+    'Hoshangabad', 'Indore', 'Jabalpur', 'Jhabua', 'Katni',
+    'Khandwa', 'Khargone', 'Mandla', 'Mandsaur', 'Morena',
+    'Narsinghpur', 'Neemuch', 'Panna', 'Raisen', 'Rajgarh',
+    'Ratlam', 'Rewa', 'Sagar', 'Satna', 'Sehore',
+    'Seoni', 'Shahdol', 'Shajapur', 'Sheopur', 'Shivpuri',
+    'Sidhi', 'Singrauli', 'Tikamgarh', 'Ujjain', 'Umaria',
+    'Vidisha',
+  ];
 
   @override
   void initState() {
@@ -38,8 +53,9 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
     _ideaController = TextEditingController(text: profile.businessIdea);
     _nameController = TextEditingController(text: profile.fullName ?? 'Ramesh Kumar');
     _capital = profile.personalCapital;
-    _district = profile.district;
-    _block = profile.block;
+    // Fall back to default only if provider has no value yet
+    _district = profile.district.isNotEmpty ? profile.district : 'Indore';
+    _block = profile.block.isNotEmpty ? profile.block : 'Sanwer';
     _socialCategory = profile.socialCategory;
   }
 
@@ -50,10 +66,146 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
     super.dispose();
   }
 
+  /// Shows a location picker dialog with MP district dropdown + block free-text field.
+  Future<void> _showLocationPicker(bool isHindi) async {
+    String tempDistrict = _district;
+    final blockController = TextEditingController(text: _block);
+    final formKey = GlobalKey<FormState>();
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              title: Text(
+                isHindi ? 'स्थान चुनें' : 'Select Location',
+                style: AppTypography.titleLarge.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // District dropdown
+                    Text(
+                      isHindi ? 'जिला (District)' : 'District',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    DropdownButtonFormField<String>(
+                      initialValue: _mpDistricts.contains(tempDistrict) ? tempDistrict : null,
+                      decoration: InputDecoration(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                        hintText: isHindi ? 'जिला चुनें' : 'Select district',
+                      ),
+                      items: _mpDistricts
+                          .map((d) => DropdownMenuItem(value: d, child: Text(d)))
+                          .toList(),
+                      onChanged: (val) {
+                        if (val != null) setDialogState(() => tempDistrict = val);
+                      },
+                      validator: (val) {
+                        if (val == null || val.isEmpty) {
+                          return isHindi ? 'जिला आवश्यक है' : 'District is required';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    // Block / Taluk free text
+                    Text(
+                      isHindi ? 'ब्लॉक / तालुका' : 'Block / Taluk',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: blockController,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: InputDecoration(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                        hintText: isHindi ? 'जैसे: सांवेर, हुज़ूर' : 'e.g. Sanwer, Huzur',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                      ),
+                      onChanged: (_) {},
+                      validator: (val) {
+                        if (val == null || val.trim().isEmpty) {
+                          return isHindi ? 'ब्लॉक आवश्यक है' : 'Block is required';
+                        }
+                        // Basic sanitisation: only letters, spaces, hyphens
+                        if (!RegExp(r'^[\p{L}\s\-]+$', unicode: true)
+                            .hasMatch(val.trim())) {
+                          return isHindi
+                              ? 'केवल अक्षर अनुमत हैं'
+                              : 'Only letters allowed';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text(
+                    isHindi ? 'रद्द करें' : 'Cancel',
+                    style: AppTypography.labelMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () {
+                    if (formKey.currentState!.validate()) {
+                      setState(() {
+                        _district = tempDistrict;
+                        _block = blockController.text.trim();
+                      });
+                      Navigator.of(ctx).pop();
+                    }
+                  },
+                  child: Text(isHindi ? 'सहेजें' : 'Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    blockController.dispose();
+  }
+
   Future<void> _handleSaveAndContinue() async {
     setState(() => _isLoading = true);
 
-    // Update Riverpod state
+    // Update Riverpod state optimistically with form selections
     final updatedProfile = ref.read(businessProfileProvider).copyWith(
           fullName: _nameController.text.trim(),
           startingPosition: _startingPosition,
@@ -65,7 +217,7 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
         );
     ref.read(businessProfileProvider.notifier).updateProfile(updatedProfile);
 
-    // Attempt backend save via ApiClient
+    // Save profile to backend via ApiClient matching EntrepreneurProfileCreate contract
     try {
       final apiClient = ref.read(apiClientProvider);
       final payload = {
@@ -79,11 +231,14 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
           'rural_or_urban': 'rural',
         },
         'available_capital': _capital,
-        'skills': ['machinery', 'operations'],
-        'interests': ['manufacturing', 'food processing'],
+        'skills': <String>['machinery'],
+        'interests': <String>[],
+        'risk_preference': 'moderate',
         'scheme_category': _socialCategory,
         'business_idea': _ideaController.text.trim(),
-        'business_name': _ideaController.text.trim().isNotEmpty ? _ideaController.text.trim() : 'Cold-Press Oil Mill',
+        'business_name': _ideaController.text.trim().isNotEmpty
+            ? _ideaController.text.trim()
+            : 'Cold-Press Oil Mill',
         'business_activity': 'Food Processing',
         'business_type': 'manufacturing',
         'business_status': 'new',
@@ -91,17 +246,32 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
         'loan_required': _capital * 3.0,
         'consent_recorded': true,
       };
-      await apiClient.post(
+
+      final res = await apiClient.post(
         ApiEndpoints.profile,
         body: payload,
       );
-    } catch (e) {
-      debugPrint('Profile sync sandbox fallback: $e');
-      // Graceful sandbox fallback: local state updated
-    } finally {
+
+      // Extract server-assigned entrepreneur profile UUID and persist in Riverpod
+      if (res != null && res is Map && res['data'] != null && res['data']['id'] != null) {
+        final profileId = res['data']['id'].toString();
+        ref.read(businessProfileProvider.notifier).setProfileId(profileId);
+      }
+
       if (mounted) {
         setState(() => _isLoading = false);
         Navigator.pushNamed(context, '/interview');
+      }
+    } catch (e) {
+      debugPrint('Profile creation failed: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save profile: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
       }
     }
   }
@@ -308,7 +478,7 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
                     IconButton(
                       icon: const Icon(Icons.edit_location_alt_rounded,
                           color: AppColors.secondary),
-                      onPressed: () {},
+                      onPressed: () => _showLocationPicker(isHindi),
                     ),
                   ],
                 ),

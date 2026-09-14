@@ -5,8 +5,10 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
 
+from app.adapters.bhashini_adapter import BhashiniAdapter
 from app.adapters.gemini_adapter import GeminiAdapter
 from app.adapters.supabase_adapter import supabase_adapter
+from app.core.config import settings
 from app.core.errors import ResourceNotFoundException
 from app.core.security import get_current_user
 from app.schemas.common import APIResponse
@@ -22,6 +24,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 prompt_service = PromptService()
 gemini_adapter = GeminiAdapter()
+bhashini_adapter = BhashiniAdapter()
 
 # Sandbox in-memory store for fallback/tests
 _OFFLINE_SESSIONS: Dict[str, Dict[str, Any]] = {}
@@ -72,6 +75,21 @@ class InterviewSessionResponse(BaseModel):
     messages: List[InterviewMessageItem] = Field(default_factory=list)
 
 
+class VoiceTurnInput(BaseModel):
+    audio_base64: str = Field(..., min_length=1, description="Base64 encoded audio bytes from mobile microphone")
+    language: Optional[str] = None
+
+
+class VoiceTurnResponse(BaseModel):
+    transcribed_text: str
+    reply: str
+    next_question: Optional[str] = None
+    language: str
+    audio_response_base64: str
+    extracted_factors: List[ExtractedFactor] = Field(default_factory=list)
+    is_complete: bool = False
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -95,13 +113,18 @@ async def create_interview_session(
 
     if db is not None:
         try:
+            try:
+                db_user_id = str(uuid.UUID(user_id))
+            except ValueError:
+                db_user_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, user_id))
+
             # Find entrepreneur_id from user_id if profile exists, or auto-provision baseline profile
-            ent_res = db.table("entrepreneurs").select("id").eq("user_id", user_id).execute()
+            ent_res = db.table("entrepreneurs").select("id").eq("user_id", db_user_id).execute()
             if ent_res.data:
                 entrepreneur_id = str(ent_res.data[0]["id"])
             else:
                 new_ent = db.table("entrepreneurs").insert({
-                    "user_id": user_id,
+                    "user_id": db_user_id,
                     "full_name": "New Entrepreneur",
                     "preferred_language": session_in.language,
                     "available_capital": 0.0,
@@ -199,15 +222,56 @@ async def send_interview_message(
             language = _OFFLINE_SESSIONS.get(session_id, {}).get("language", "hi")
             for m in _OFFLINE_MESSAGES.get(session_id, []):
                 history.append({"role": m["role"].lower(), "content": m["content"]})
+        elif session_id.startswith("offline-") or settings.ENVIRONMENT == "development":
+            _OFFLINE_SESSIONS[session_id] = {
+                "id": session_id,
+                "entrepreneur_id": str(current_user.get("sub") or "dev-user-default"),
+                "language": msg_in.language or "hi",
+            }
+            _OFFLINE_MESSAGES[session_id] = []
+            language = msg_in.language or "hi"
         else:
             raise ResourceNotFoundException("InterviewSession", session_id)
+
+        # Attempt to auto-persist missing session into DB if valid UUID format
+        if db is not None:
+            try:
+                valid_session_uuid = str(uuid.UUID(session_id))
+                user_id_raw = str(current_user.get("sub") or current_user.get("id") or "dev-user-default")
+                try:
+                    db_user_id = str(uuid.UUID(user_id_raw))
+                except ValueError:
+                    db_user_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, user_id_raw))
+
+                ent_res = db.table("entrepreneurs").select("id").eq("user_id", db_user_id).execute()
+                if ent_res.data:
+                    ent_id = str(ent_res.data[0]["id"])
+                else:
+                    new_ent = db.table("entrepreneurs").insert({
+                        "user_id": db_user_id,
+                        "full_name": "New Entrepreneur",
+                        "preferred_language": language,
+                        "available_capital": 0.0,
+                    }).execute()
+                    ent_id = str(new_ent.data[0]["id"]) if new_ent.data else db_user_id
+
+                db.table("interview_sessions").insert({
+                    "id": valid_session_uuid,
+                    "entrepreneur_id": ent_id,
+                    "status": "ACTIVE",
+                    "language": language,
+                    "started_at": now.isoformat(),
+                }).execute()
+                found_in_db = True
+            except Exception as e:
+                logger.debug(f"Auto-heal session in DB skipped: {e}")
 
     # Add current user message to history
     history.append({"role": "user", "content": sanitized_content})
 
     # 2. Persist user message
     user_msg_id = str(uuid.uuid4())
-    if db is not None:
+    if db is not None and found_in_db:
         try:
             db.table("interview_messages").insert({
                 "id": user_msg_id,
@@ -268,7 +332,7 @@ async def send_interview_message(
     asst_msg_id = str(uuid.uuid4())
     asst_content = f"{ai_turn.reply}\n\n{ai_turn.next_question or ''}".strip()
 
-    if db is not None:
+    if db is not None and found_in_db:
         try:
             db.table("interview_messages").insert({
                 "id": asst_msg_id,
@@ -407,3 +471,91 @@ async def complete_interview_session(
         )
 
     raise ResourceNotFoundException("InterviewSession", session_id)
+
+
+@router.post(
+    "/interviews/{session_id}/voice",
+    response_model=APIResponse[VoiceTurnResponse],
+    summary="Send voice message from phone mic and receive AI mentor advice with synthesized speech",
+)
+async def process_voice_interview_message(
+    session_id: str,
+    voice_in: VoiceTurnInput,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    cleaned_audio = voice_in.audio_base64.strip()
+    if not cleaned_audio:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Audio payload must not be empty.",
+        )
+
+    # 1. Verify session exists
+    db = _get_db()
+    session_lang = voice_in.language or "hi"
+    found = False
+    if db is not None:
+        try:
+            sess_res = db.table("interview_sessions").select("language").eq("id", session_id).execute()
+            if sess_res.data:
+                found = True
+                session_lang = sess_res.data[0].get("language") or session_lang
+        except Exception as e:
+            logger.warning(f"Error checking session in db: {e}")
+
+    if not found:
+        if session_id in _OFFLINE_SESSIONS:
+            session_lang = _OFFLINE_SESSIONS[session_id].get("language") or session_lang
+        elif session_id.startswith("offline-") or settings.ENVIRONMENT == "development":
+            _OFFLINE_SESSIONS[session_id] = {
+                "id": session_id,
+                "entrepreneur_id": str(current_user.get("sub") or "dev-user-default"),
+                "language": voice_in.language or "hi",
+            }
+            _OFFLINE_MESSAGES[session_id] = []
+            session_lang = voice_in.language or "hi"
+        else:
+            raise ResourceNotFoundException("InterviewSession", session_id)
+
+    # 2. Transcribe voice to text via Bhashini ASR
+    transcription = await bhashini_adapter.speech_to_text(cleaned_audio, lang=session_lang)
+    if not transcription or not transcription.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Could not transcribe audio input. Please speak clearly into the microphone.",
+        )
+
+    # 3. Process transcribed message through mentor reasoning
+    msg_input = InterviewMessageInput(content=transcription, language=session_lang)
+    turn_api_resp = await send_interview_message(
+        session_id=session_id,
+        msg_in=msg_input,
+        current_user=current_user,
+    )
+    turn_data = turn_api_resp.data
+
+    # 4. Synthesize AI mentor response into speech via Bhashini TTS
+    combined_speech = (
+        f"{turn_data.reply} {turn_data.next_question}".strip()
+        if turn_data.next_question
+        else turn_data.reply
+    )
+    audio_response_b64 = await bhashini_adapter.text_to_speech(
+        combined_speech,
+        lang=session_lang,
+    )
+
+    return APIResponse(
+        success=True,
+        data=VoiceTurnResponse(
+            transcribed_text=transcription,
+            reply=turn_data.reply,
+            next_question=turn_data.next_question,
+            language=session_lang,
+            audio_response_base64=audio_response_b64,
+            extracted_factors=turn_data.extracted_factors,
+            is_complete=turn_data.is_complete,
+        ),
+        message="Voice message processed and audio response synthesized.",
+    )
+
