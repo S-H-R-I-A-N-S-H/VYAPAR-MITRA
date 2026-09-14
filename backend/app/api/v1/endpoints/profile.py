@@ -31,6 +31,24 @@ def _get_db():
     return supabase_adapter.admin_client or supabase_adapter.client
 
 
+def _extract_user_id(current_user: Any) -> str:
+    if isinstance(current_user, dict):
+        return str(current_user.get("sub") or current_user.get("user_id") or current_user.get("id"))
+    if hasattr(current_user, "user_id"):
+        return str(current_user.user_id)
+    if hasattr(current_user, "id"):
+        return str(current_user.id)
+    return str(current_user)
+
+
+def _parse_datetime(val: Any) -> datetime:
+    if isinstance(val, datetime):
+        return val
+    if isinstance(val, str):
+        return datetime.fromisoformat(val)
+    return datetime.now(timezone.utc)
+
+
 @router.post(
     "/profile",
     response_model=APIResponse[EntrepreneurProfileResponse],
@@ -39,9 +57,9 @@ def _get_db():
 )
 async def create_profile(
     profile_in: EntrepreneurProfileCreate,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: Any = Depends(get_current_user),
 ):
-    user_id = str(current_user.get("sub") or current_user.get("id"))
+    user_id = _extract_user_id(current_user)
     db = _get_db()
 
     now = datetime.now(timezone.utc)
@@ -109,8 +127,8 @@ async def create_profile(
                 interests=record.get("interests") or [],
                 risk_preference=record.get("risk_preference") or "moderate",
                 scheme_category=profile_in.scheme_category or "general",
-                created_at=datetime.fromisoformat(record["created_at"]),
-                updated_at=datetime.fromisoformat(record["updated_at"]),
+                created_at=_parse_datetime(record["created_at"]),
+                updated_at=_parse_datetime(record["updated_at"]),
             )
             return APIResponse(success=True, data=response_data, message="Profile created successfully.")
 
@@ -130,7 +148,10 @@ async def create_profile(
         "created_at": now,
     }
 
-    ent_id = str(uuid.uuid4())
+    existing_offline = _OFFLINE_PROFILES.get(user_id)
+    ent_id = existing_offline["id"] if existing_offline else str(uuid.uuid4())
+    created_at = existing_offline["created_at"] if existing_offline else now
+
     stored = {
         "id": ent_id,
         "user_id": user_id,
@@ -143,7 +164,7 @@ async def create_profile(
         "interests": profile_in.interests,
         "risk_preference": profile_in.risk_preference,
         "scheme_category": profile_in.scheme_category or "general",
-        "created_at": now,
+        "created_at": created_at,
         "updated_at": now,
     }
     _OFFLINE_PROFILES[user_id] = stored
@@ -159,8 +180,8 @@ async def create_profile(
     response_model=APIResponse[EntrepreneurProfileResponse],
     summary="Get current user's profile",
 )
-async def get_profile(current_user: Dict[str, Any] = Depends(get_current_user)):
-    user_id = str(current_user.get("sub") or current_user.get("id"))
+async def get_profile(current_user: Any = Depends(get_current_user)):
+    user_id = _extract_user_id(current_user)
     db = _get_db()
 
     if db is not None:
@@ -168,6 +189,14 @@ async def get_profile(current_user: Dict[str, Any] = Depends(get_current_user)):
             res = db.table("entrepreneurs").select("*").eq("user_id", user_id).execute()
             if res.data:
                 record = res.data[0]
+                scheme_category = "general"
+                try:
+                    elig_res = db.table("entrepreneur_eligibility_profile").select("category").eq("entrepreneur_id", record["id"]).execute()
+                    if elig_res.data:
+                        scheme_category = elig_res.data[0].get("category") or "general"
+                except Exception:
+                    pass
+
                 return APIResponse(
                     success=True,
                     data=EntrepreneurProfileResponse(
@@ -181,9 +210,9 @@ async def get_profile(current_user: Dict[str, Any] = Depends(get_current_user)):
                         skills=record.get("skills") or [],
                         interests=record.get("interests") or [],
                         risk_preference=record.get("risk_preference") or "moderate",
-                        scheme_category="general",
-                        created_at=datetime.fromisoformat(record["created_at"]),
-                        updated_at=datetime.fromisoformat(record["updated_at"]),
+                        scheme_category=scheme_category,
+                        created_at=_parse_datetime(record["created_at"]),
+                        updated_at=_parse_datetime(record["updated_at"]),
                     ),
                 )
         except Exception as e:
@@ -205,9 +234,9 @@ async def get_profile(current_user: Dict[str, Any] = Depends(get_current_user)):
 )
 async def update_profile(
     profile_update: EntrepreneurProfileUpdate,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: Any = Depends(get_current_user),
 ):
-    user_id = str(current_user.get("sub") or current_user.get("id"))
+    user_id = _extract_user_id(current_user)
     db = _get_db()
     now = datetime.now(timezone.utc)
 
@@ -219,6 +248,14 @@ async def update_profile(
             res = db.table("entrepreneurs").update(updates).eq("user_id", user_id).execute()
             if res.data:
                 record = res.data[0]
+                scheme_category = profile_update.scheme_category or "general"
+                try:
+                    elig_res = db.table("entrepreneur_eligibility_profile").select("category").eq("entrepreneur_id", record["id"]).execute()
+                    if elig_res.data and not profile_update.scheme_category:
+                        scheme_category = elig_res.data[0].get("category") or "general"
+                except Exception:
+                    pass
+
                 return APIResponse(
                     success=True,
                     data=EntrepreneurProfileResponse(
@@ -232,9 +269,9 @@ async def update_profile(
                         skills=record.get("skills") or [],
                         interests=record.get("interests") or [],
                         risk_preference=record.get("risk_preference") or "moderate",
-                        scheme_category=profile_update.scheme_category or "general",
-                        created_at=datetime.fromisoformat(record["created_at"]),
-                        updated_at=datetime.fromisoformat(record["updated_at"]),
+                        scheme_category=scheme_category,
+                        created_at=_parse_datetime(record["created_at"]),
+                        updated_at=_parse_datetime(record["updated_at"]),
                     ),
                     message="Profile updated successfully.",
                 )
@@ -267,7 +304,7 @@ async def update_profile(
 )
 async def create_location(
     loc_in: LocationCreate,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: Any = Depends(get_current_user),
 ):
     db = _get_db()
     now = datetime.now(timezone.utc)
@@ -296,7 +333,7 @@ async def create_location(
                         pincode=rec.get("pincode"),
                         latitude=float(rec["latitude"]) if rec.get("latitude") else None,
                         longitude=float(rec["longitude"]) if rec.get("longitude") else None,
-                        created_at=datetime.fromisoformat(rec["created_at"]),
+                        created_at=_parse_datetime(rec["created_at"]),
                     ),
                     message="Location saved successfully.",
                 )
@@ -329,7 +366,7 @@ async def create_location(
 )
 async def get_location(
     location_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: Any = Depends(get_current_user),
 ):
     db = _get_db()
     if db is not None:
@@ -347,7 +384,7 @@ async def get_location(
                         pincode=rec.get("pincode"),
                         latitude=float(rec["latitude"]) if rec.get("latitude") else None,
                         longitude=float(rec["longitude"]) if rec.get("longitude") else None,
-                        created_at=datetime.fromisoformat(rec["created_at"]),
+                        created_at=_parse_datetime(rec["created_at"]),
                     ),
                 )
         except Exception as e:

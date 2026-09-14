@@ -46,7 +46,7 @@ class _ConversationalInterviewScreenState
   final List<ChatMessage> _messages = [];
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final ApiClient _apiClient = ApiClient();
+  ApiClient get _apiClient => ref.read(apiClientProvider);
 
   late VoiceService _voiceService;
   String? _sessionId;

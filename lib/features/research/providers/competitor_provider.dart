@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/network/api_client.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../../../core/providers/app_providers.dart';
 import '../models/competitor_poi.dart';
@@ -23,7 +22,7 @@ final competitorPoisProvider = FutureProvider.autoDispose<List<CompetitorPoi>>((
   const defaultLon = 75.8078;
 
   try {
-    final apiClient = ApiClient();
+    final apiClient = ref.watch(apiClientProvider);
     final url = '${ApiEndpoints.localityCompetitors}?category=$category&latitude=$defaultLat&longitude=$defaultLon&radius_km=$radius';
     final response = await apiClient.get(url);
 
