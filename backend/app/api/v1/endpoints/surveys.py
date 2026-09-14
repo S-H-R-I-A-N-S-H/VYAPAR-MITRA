@@ -9,6 +9,7 @@ from app.api.v1.endpoints.research import _OFFLINE_EVIDENCE
 from app.core.errors import ResourceNotFoundException
 from app.core.security import get_current_user
 from app.schemas.common import APIResponse
+from app.utils import verify_research_project_ownership, verify_survey_ownership
 from app.schemas.surveys import (
     SurveyCreate,
     SurveyModelResponse,
@@ -40,6 +41,7 @@ async def create_survey(
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     db = _get_db()
+    verify_research_project_ownership(db, survey_in.research_project_id, current_user)
     now = datetime.now(timezone.utc)
     survey_id = str(uuid.uuid4())
 
@@ -108,6 +110,7 @@ async def get_survey(
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     db = _get_db()
+    verify_survey_ownership(db, survey_id, current_user)
     if db is not None:
         try:
             res = db.table("surveys").select("*").eq("id", survey_id).execute()
@@ -156,6 +159,7 @@ async def submit_survey_response(
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     db = _get_db()
+    verify_survey_ownership(db, survey_id, current_user)
     now = datetime.now(timezone.utc)
     resp_id = str(uuid.uuid4())
 

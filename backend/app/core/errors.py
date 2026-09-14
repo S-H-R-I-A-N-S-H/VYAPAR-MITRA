@@ -57,3 +57,24 @@ class AIProviderException(VyaparMitraException):
             error_code=error_code,
             extra=extra,
         )
+
+
+class ServiceUnavailableException(VyaparMitraException):
+    """Raised when a required backend service (DB, external API) is temporarily unavailable."""
+    def __init__(self, detail: str = "A required service is temporarily unavailable. Please try again shortly."):
+        super().__init__(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=detail,
+            error_code="SERVICE_UNAVAILABLE",
+        )
+
+
+class ValidationException(VyaparMitraException):
+    """Raised for business-logic validation failures (distinct from Pydantic schema errors)."""
+    def __init__(self, detail: str = "Request validation failed.", extra: Optional[Any] = None):
+        super().__init__(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=detail,
+            error_code="VALIDATION_ERROR",
+            extra=extra,
+        )

@@ -1,6 +1,7 @@
-from typing import List
-from fastapi import APIRouter
+from typing import Any, Dict, List
+from fastapi import APIRouter, Depends
 from app.adapters.supabase_adapter import supabase_adapter
+from app.core.security import get_current_user
 from app.schemas.common import APIResponse
 from app.schemas.schemes import MatchedScheme, SchemeItem, SchemeMatchRequest
 from app.services.scheme_matcher import SchemeMatcher
@@ -9,7 +10,7 @@ router = APIRouter()
 
 
 @router.get("/", response_model=APIResponse[List[SchemeItem]])
-async def list_schemes():
+async def list_schemes(current_user: Dict[str, Any] = Depends(get_current_user)):  # FIX HIGH-4a
     """
     Returns active government schemes catalog available in the database.
     """
@@ -37,7 +38,10 @@ async def list_schemes():
 
 
 @router.post("/match", response_model=APIResponse[List[MatchedScheme]])
-async def match_schemes(payload: SchemeMatchRequest):
+async def match_schemes(
+    payload: SchemeMatchRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),  # FIX HIGH-4a
+):
     """
     Evaluates government scheme eligibility based on project parameters,
     capital requirements, and optional affirmative category consent.

@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from app.adapters.gemini_adapter import GeminiAdapter
 from app.adapters.supabase_adapter import supabase_adapter
 from app.api.v1.endpoints.opportunities import _OFFLINE_BUSINESSES
+from app.api.v1.endpoints.profile import _OFFLINE_LOCATIONS, _OFFLINE_PROFILES
 from app.api.v1.endpoints.research import _OFFLINE_EVIDENCE, _OFFLINE_PROJECTS
 from app.api.v1.endpoints.finance import _OFFLINE_SCENARIOS
 from app.core.errors import ResourceNotFoundException
@@ -16,6 +17,7 @@ from app.services.conflict_detector import ConflictDetector
 from app.services.financial_engine import FinancialEngine, FinancialSimulationInput
 from app.services.prompt_service import PromptService
 from app.services.scheme_matcher import SchemeMatcher, SchemeMatchRequest
+from app.utils import extract_user_id, verify_business_ownership
 
 logger = logging.getLogger(__name__)
 
@@ -88,27 +90,10 @@ async def get_business_recommendation(
     is_affordable = True
     dscr = 2.0
 
-    # 1. Fetch Business
-    found = False
-    if db is not None:
-        try:
-            b_res = db.table("businesses").select("*").eq("id", business_id).execute()
-            if b_res.data:
-                found = True
-                b_row = b_res.data[0]
-                biz_name = b_row["name"]
-                biz_domain = b_row["domain"]
-        except Exception as e:
-            logger.warning(f"Failed to fetch business in recommendation: {e}")
-
-    if not found and business_id in _OFFLINE_BUSINESSES:
-        found = True
-        b_row = _OFFLINE_BUSINESSES[business_id]
-        biz_name = b_row["name"]
-        biz_domain = b_row["domain"]
-
-    if not found:
-        raise ResourceNotFoundException("Business", business_id)
+    # 1. Fetch & Verify Business Ownership
+    b_row = verify_business_ownership(db, business_id, current_user)
+    biz_name = b_row.get("name") or "Enterprise"
+    biz_domain = b_row.get("domain") or "General"
 
     # 2. Fetch Financial Scenarios & Simulation
     if db is not None:
@@ -140,15 +125,48 @@ async def get_business_recommendation(
         except Exception as e:
             logger.warning(f"Failed to fetch financial scenario: {e}")
 
-    # 3. Determine Scheme Eligibility
+    # 3. Determine Scheme Eligibility (Resolve dynamic location & category)
+    state = "Maharashtra"
+    district = "Pune"
+    category = "general"
+
+    ent_id = b_row.get("entrepreneur_id")
+    if db is not None and ent_id:
+        try:
+            ent_res = db.table("entrepreneurs").select("location_id, locations(state, district)").eq("id", ent_id).execute()
+            if ent_res.data:
+                e_row = ent_res.data[0]
+                loc = e_row.get("locations")
+                if loc and isinstance(loc, dict):
+                    state = loc.get("state") or state
+                    district = loc.get("district") or district
+            cat_res = db.table("entrepreneur_eligibility_profile").select("category").eq("entrepreneur_id", ent_id).execute()
+            if cat_res.data and cat_res.data[0].get("category"):
+                category = cat_res.data[0]["category"]
+        except Exception as e:
+            logger.warning(f"Could not fetch entrepreneur profile details for recommendation: {e}")
+
+    try:
+        user_id = extract_user_id(current_user)
+        if user_id in _OFFLINE_PROFILES:
+            prof = _OFFLINE_PROFILES[user_id]
+            category = prof.get("scheme_category") or category
+            loc_id = prof.get("location_id")
+            if loc_id and loc_id in _OFFLINE_LOCATIONS:
+                loc = _OFFLINE_LOCATIONS[loc_id]
+                state = loc.get("state") or state
+                district = loc.get("district") or district
+    except Exception:
+        pass
+
     scheme_matches = SchemeMatcher.evaluate(
         SchemeMatchRequest(
             project_cost=project_cost,
             own_capital=own_cap,
             domain=biz_domain,
-            state="Maharashtra",
-            district="Pune",
-            category="general",
+            state=state,
+            district=district,
+            category=category,
         )
     )
     eligible_scheme_names = [

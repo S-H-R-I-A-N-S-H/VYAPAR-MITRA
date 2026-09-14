@@ -6,7 +6,11 @@ from fastapi import APIRouter, Depends, status
 
 from app.adapters.mappls_adapter import MapplsAdapter
 from app.adapters.supabase_adapter import supabase_adapter
-from app.core.errors import ResourceNotFoundException, VyaparMitraException
+from app.core.errors import (
+    ResourceNotFoundException,
+    ServiceUnavailableException,
+    VyaparMitraException,
+)
 from app.core.security import get_current_user
 from app.schemas.common import APIResponse
 from app.schemas.profile import (
@@ -16,6 +20,7 @@ from app.schemas.profile import (
     LocationCreate,
     LocationResponse,
 )
+from app.utils import extract_user_id, is_production, parse_db_datetime, require_db
 
 logger = logging.getLogger(__name__)
 
@@ -31,22 +36,8 @@ def _get_db():
     return supabase_adapter.admin_client or supabase_adapter.client
 
 
-def _extract_user_id(current_user: Any) -> str:
-    if isinstance(current_user, dict):
-        return str(current_user.get("sub") or current_user.get("user_id") or current_user.get("id"))
-    if hasattr(current_user, "user_id"):
-        return str(current_user.user_id)
-    if hasattr(current_user, "id"):
-        return str(current_user.id)
-    return str(current_user)
-
-
-def _parse_datetime(val: Any) -> datetime:
-    if isinstance(val, datetime):
-        return val
-    if isinstance(val, str):
-        return datetime.fromisoformat(val)
-    return datetime.now(timezone.utc)
+_extract_user_id = extract_user_id
+_parse_datetime = parse_db_datetime
 
 
 @router.post(
@@ -134,8 +125,11 @@ async def create_profile(
 
         except Exception as e:
             logger.warning(f"Database write failed ({e}); falling back to in-memory profile store.")
+            if is_production():
+                raise ServiceUnavailableException("Database service unavailable.")
 
     # Offline / sandbox in-memory persistence
+    require_db(db, "create profile")
     loc_id = str(uuid.uuid4())
     _OFFLINE_LOCATIONS[loc_id] = {
         "id": loc_id,
@@ -217,6 +211,8 @@ async def get_profile(current_user: Any = Depends(get_current_user)):
                 )
         except Exception as e:
             logger.warning(f"Database read failed: {e}")
+            if is_production():
+                raise ServiceUnavailableException("Database service unavailable.")
 
     if user_id in _OFFLINE_PROFILES:
         return APIResponse(
@@ -242,19 +238,43 @@ async def update_profile(
 
     updates = {k: v for k, v in profile_update.model_dump().items() if v is not None}
     updates["updated_at"] = now.isoformat()
+    scheme_category = updates.pop("scheme_category", None)
 
     if db is not None:
         try:
+            existing = db.table("entrepreneurs").select("id").eq("user_id", user_id).execute()
+            if not existing.data:
+                raise ResourceNotFoundException("EntrepreneurProfile", user_id)
+            ent_id = str(existing.data[0]["id"])
+
             res = db.table("entrepreneurs").update(updates).eq("user_id", user_id).execute()
             if res.data:
                 record = res.data[0]
-                scheme_category = profile_update.scheme_category or "general"
-                try:
-                    elig_res = db.table("entrepreneur_eligibility_profile").select("category").eq("entrepreneur_id", record["id"]).execute()
-                    if elig_res.data and not profile_update.scheme_category:
-                        scheme_category = elig_res.data[0].get("category") or "general"
-                except Exception:
-                    pass
+                resolved_category = "general"
+
+                if scheme_category is not None:
+                    elig_check = db.table("entrepreneur_eligibility_profile").select("id").eq("entrepreneur_id", ent_id).execute()
+                    if elig_check.data:
+                        db.table("entrepreneur_eligibility_profile").update({
+                            "category": scheme_category,
+                            "consent_given": True,
+                            "consent_recorded_at": now.isoformat(),
+                        }).eq("entrepreneur_id", ent_id).execute()
+                    else:
+                        db.table("entrepreneur_eligibility_profile").insert({
+                            "entrepreneur_id": ent_id,
+                            "category": scheme_category,
+                            "consent_given": True,
+                            "consent_recorded_at": now.isoformat(),
+                        }).execute()
+                    resolved_category = scheme_category
+                else:
+                    try:
+                        elig_res = db.table("entrepreneur_eligibility_profile").select("category").eq("entrepreneur_id", ent_id).execute()
+                        if elig_res.data and elig_res.data[0].get("category"):
+                            resolved_category = elig_res.data[0]["category"]
+                    except Exception:
+                        pass
 
                 return APIResponse(
                     success=True,
@@ -269,19 +289,25 @@ async def update_profile(
                         skills=record.get("skills") or [],
                         interests=record.get("interests") or [],
                         risk_preference=record.get("risk_preference") or "moderate",
-                        scheme_category=scheme_category,
+                        scheme_category=resolved_category,
                         created_at=_parse_datetime(record["created_at"]),
                         updated_at=_parse_datetime(record["updated_at"]),
                     ),
                     message="Profile updated successfully.",
                 )
+        except VyaparMitraException:
+            raise
         except Exception as e:
             logger.warning(f"Database update failed: {e}")
+            if is_production():
+                raise ServiceUnavailableException("Database service unavailable.")
 
     if user_id in _OFFLINE_PROFILES:
         stored = _OFFLINE_PROFILES[user_id]
         for k, v in updates.items():
             stored[k] = v
+        if scheme_category is not None:
+            stored["scheme_category"] = scheme_category
         stored["updated_at"] = now
         return APIResponse(
             success=True,

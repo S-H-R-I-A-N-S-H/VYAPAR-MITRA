@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     PORT: int = 8000
     HOST: str = "0.0.0.0"
     DEV_ALLOW_ANONYMOUS: bool = False
+    # Comma-separated list of allowed CORS origins. Defaults to empty (wildcard allowed, no credentials).
+    # In production, set to your actual frontend domain(s), e.g. "https://app.vyaparmitra.in"
+    CORS_ORIGINS: str = ""
 
     # Supabase
     SUPABASE_URL: str = ""

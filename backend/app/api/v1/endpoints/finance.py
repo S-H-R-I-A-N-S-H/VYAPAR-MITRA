@@ -7,8 +7,19 @@ from pydantic import BaseModel, Field
 
 from app.adapters.gemini_adapter import GeminiAdapter
 from app.adapters.supabase_adapter import supabase_adapter
-from app.core.errors import ResourceNotFoundException
+from app.core.config import settings
+from app.core.errors import (
+    ForbiddenOperationException,
+    ResourceNotFoundException,
+    ServiceUnavailableException,
+)
 from app.core.security import get_current_user
+from app.utils import (
+    require_db,
+    should_use_offline_fallback,
+    verify_business_ownership,
+    verify_financial_scenario_ownership,
+)
 from app.schemas.common import APIResponse
 from app.schemas.finance import (
     FinancialSimulationInput,
@@ -86,7 +97,10 @@ class WhatIfResponse(BaseModel):
     response_model=APIResponse[FinancialSimulationResult],
     summary="Ad-hoc deterministic financial simulation",
 )
-async def simulate_financials(payload: FinancialSimulationInput):
+async def simulate_financials(
+    payload: FinancialSimulationInput,
+    current_user: Dict[str, Any] = Depends(get_current_user),  # FIX CRIT-3: was unauthenticated
+):
     """
     Executes authoritative deterministic financial modeling.
     Calculates EMI, cash flow, DSCR, and affordability risk.
@@ -110,8 +124,9 @@ async def create_financial_scenario(
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     db = _get_db()
-    now = datetime.now(timezone.utc)
+    verify_business_ownership(db, scen_in.business_id, current_user)
     scen_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
 
     # 1. Authoritative deterministic math calculation
     sim_input = FinancialSimulationInput(
@@ -220,6 +235,8 @@ async def create_financial_scenario(
             )
         except Exception as e:
             logger.warning(f"Database insert financial scenario failed: {e}")
+            if settings.ENVIRONMENT == "production":
+                raise ServiceUnavailableException("Failed to persist financial scenario.")
 
     # Offline/sandbox fallback
     scen_data = {
@@ -262,48 +279,32 @@ async def get_financial_scenario(
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     db = _get_db()
-    if db is not None:
-        try:
-            res = db.table("financial_scenarios").select("*").eq("id", scenario_id).execute()
-            if res.data:
-                rec = res.data[0]
-                sim_input = FinancialSimulationInput(
-                    total_project_cost=float(rec["total_project_cost"]),
-                    own_capital=float(rec["own_capital"]),
-                    annual_interest_rate_pct=float(rec["interest_rate_pct"]),
-                    tenure_months=int(rec["tenure_months"]),
-                    projected_monthly_revenue=float(rec["monthly_revenue_est"]),
-                    projected_monthly_operating_cost=float(rec["monthly_operating_cost_est"]),
-                )
-                sim_res = FinancialEngine.simulate(sim_input)
-                return APIResponse(
-                    success=True,
-                    data=FinancialScenarioResponse(
-                        id=str(rec["id"]),
-                        business_id=str(rec["business_id"]),
-                        scenario_name=rec["scenario_name"],
-                        simulation_result=sim_res,
-                        created_at=datetime.fromisoformat(rec["created_at"]),
-                    ),
-                )
-        except Exception as e:
-            logger.warning(f"Database get scenario failed: {e}")
+    rec = verify_financial_scenario_ownership(db, scenario_id, current_user)
 
-    if scenario_id in _OFFLINE_SCENARIOS:
-        s = _OFFLINE_SCENARIOS[scenario_id]
-        return APIResponse(
-            success=True,
-            data=FinancialScenarioResponse(
-                id=s["id"],
-                business_id=s["business_id"],
-                scenario_name=s["scenario_name"],
-                simulation_result=s["simulation_result"],
-                explanation=s["explanation"],
-                created_at=s["created_at"],
-            ),
-        )
+    sim_input = FinancialSimulationInput(
+        total_project_cost=float(rec["total_project_cost"]),
+        own_capital=float(rec["own_capital"]),
+        annual_interest_rate_pct=float(rec.get("interest_rate_pct") or rec.get("annual_interest_rate_pct") or 9.5),
+        tenure_months=int(rec["tenure_months"]),
+        projected_monthly_revenue=float(rec.get("monthly_revenue_est") or rec.get("projected_monthly_revenue") or 0.0),
+        projected_monthly_operating_cost=float(rec.get("monthly_operating_cost_est") or rec.get("projected_monthly_operating_cost") or 0.0),
+    )
+    sim_res = FinancialEngine.simulate(sim_input)
+    created_at = rec.get("created_at")
+    if isinstance(created_at, str):
+        created_at = datetime.fromisoformat(created_at)
 
-    raise ResourceNotFoundException("FinancialScenario", scenario_id)
+    return APIResponse(
+        success=True,
+        data=FinancialScenarioResponse(
+            id=str(rec["id"]),
+            business_id=str(rec["business_id"]),
+            scenario_name=rec.get("scenario_name", "Base Scenario"),
+            simulation_result=sim_res,
+            explanation=rec.get("explanation"),
+            created_at=created_at or datetime.now(timezone.utc),
+        ),
+    )
 
 
 @router.post(
@@ -316,41 +317,26 @@ async def run_what_if_stress_test(
     stress_in: WhatIfInput,
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
-    # Fetch base scenario parameters
-    scen_res = await get_financial_scenario(scenario_id, current_user)
-    base_sim = scen_res.data.simulation_result
-
-    # Retrieve base inputs
     db = _get_db()
-    base_cost = base_sim.total_project_cost
-    base_own = base_sim.own_capital
-    base_rate = 9.5
-    base_tenure = 36
-    base_rev = base_sim.projected_monthly_profit + (base_cost * 0.05)  # estimate
-    base_op_cost = base_rev - base_sim.projected_monthly_profit
+    rec = verify_financial_scenario_ownership(db, scenario_id, current_user)
 
-    if db is not None:
-        try:
-            r = db.table("financial_scenarios").select("*").eq("id", scenario_id).execute()
-            if r.data:
-                row = r.data[0]
-                base_cost = float(row["total_project_cost"])
-                base_own = float(row["own_capital"])
-                base_rate = float(row["interest_rate_pct"])
-                base_tenure = int(row["tenure_months"])
-                base_rev = float(row["monthly_revenue_est"])
-                base_op_cost = float(row["monthly_operating_cost_est"])
-        except Exception:
-            pass
+    base_cost = float(rec["total_project_cost"])
+    base_own = float(rec["own_capital"])
+    base_rate = float(rec.get("interest_rate_pct") or rec.get("annual_interest_rate_pct") or 9.5)
+    base_tenure = int(rec["tenure_months"])
+    base_rev = float(rec.get("monthly_revenue_est") or rec.get("projected_monthly_revenue") or 0.0)
+    base_op_cost = float(rec.get("monthly_operating_cost_est") or rec.get("projected_monthly_operating_cost") or 0.0)
 
-    if scenario_id in _OFFLINE_SCENARIOS:
-        s = _OFFLINE_SCENARIOS[scenario_id]
-        base_cost = s["total_project_cost"]
-        base_own = s["own_capital"]
-        base_rate = s["annual_interest_rate_pct"]
-        base_tenure = s["tenure_months"]
-        base_rev = s["projected_monthly_revenue"]
-        base_op_cost = s["projected_monthly_operating_cost"]
+    base_sim = FinancialEngine.simulate(
+        FinancialSimulationInput(
+            total_project_cost=base_cost,
+            own_capital=base_own,
+            annual_interest_rate_pct=base_rate,
+            tenure_months=base_tenure,
+            projected_monthly_revenue=base_rev,
+            projected_monthly_operating_cost=base_op_cost,
+        )
+    )
 
     # Calculate Stressed Case
     stressed_rev = base_rev * (1.0 - (stress_in.revenue_drop_pct / 100.0))

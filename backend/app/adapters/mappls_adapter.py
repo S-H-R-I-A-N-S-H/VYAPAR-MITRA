@@ -102,6 +102,8 @@ class MapplsAdapter:
                         if resp.status_code == 200:
                             data = resp.json()
                             cop = data.get("copResults")
+                            if isinstance(cop, list) and cop:
+                                cop = cop[0]
                             if cop and isinstance(cop, dict):
                                 district_raw = cop.get("district") or cop.get("city") or "Indore"
                                 district = district_raw.replace(" District", "").strip()
@@ -109,38 +111,48 @@ class MapplsAdapter:
                                 state = cop.get("state") or "Madhya Pradesh"
                                 pincode = str(cop.get("pincode") or "")
 
-                                # Resolve lat/lon: check known table first
-                                lat, lon = 22.9772, 75.8078  # Sanwer default
-                                for key, coords in self._MP_COORDS.items():
-                                    if key in sub_dist.lower() or key in cleaned_query.lower():
-                                        lat, lon = coords
-                                        break
-                                else:
-                                    # Fallback: search nearby with location name
+                                # Check direct coordinates first
+                                lat, lon = None, None
+                                if cop.get("latitude") is not None and cop.get("longitude") is not None:
                                     try:
-                                        s_resp = await client.get(
-                                            "https://atlas.mappls.com/api/places/search/json",
-                                            params={"query": sub_dist, "radius": "50000"},
-                                            headers={"Authorization": f"Bearer {token}"},
-                                        )
-                                        if s_resp.status_code == 200:
-                                            locs = s_resp.json().get("suggestedLocations", [])
-                                            if locs:
-                                                # Use nearby endpoint to get coords for the eLoc
-                                                eloc = locs[0].get("eLoc", "")
-                                                if eloc:
-                                                    n_resp = await client.get(
-                                                        self.NEARBY_URL,
-                                                        params={"keywords": "area", "refLocation": eloc, "radius": 100},
-                                                        headers={"Authorization": f"Bearer {token}"},
-                                                    )
-                                                    if n_resp.status_code == 200:
-                                                        nlocs = n_resp.json().get("suggestedLocations", [])
-                                                        if nlocs and nlocs[0].get("latitude"):
-                                                            lat = float(nlocs[0]["latitude"])
-                                                            lon = float(nlocs[0]["longitude"])
-                                    except Exception:
-                                        pass
+                                        lat = float(cop["latitude"])
+                                        lon = float(cop["longitude"])
+                                    except (ValueError, TypeError):
+                                        lat, lon = None, None
+
+                                if lat is None or lon is None:
+                                    # Resolve lat/lon: check known table first
+                                    lat, lon = 22.9772, 75.8078  # Sanwer default
+                                    for key, coords in self._MP_COORDS.items():
+                                        if key in sub_dist.lower() or key in cleaned_query.lower():
+                                            lat, lon = coords
+                                            break
+                                    else:
+                                        # Fallback: search nearby with location name
+                                        try:
+                                            s_resp = await client.get(
+                                                "https://atlas.mappls.com/api/places/search/json",
+                                                params={"query": sub_dist, "radius": "50000"},
+                                                headers={"Authorization": f"Bearer {token}"},
+                                            )
+                                            if s_resp.status_code == 200:
+                                                locs = s_resp.json().get("suggestedLocations", [])
+                                                if locs:
+                                                    # Use nearby endpoint to get coords for the eLoc
+                                                    eloc = locs[0].get("eLoc", "")
+                                                    if eloc:
+                                                        n_resp = await client.get(
+                                                            self.NEARBY_URL,
+                                                            params={"keywords": "area", "refLocation": eloc, "radius": 100},
+                                                            headers={"Authorization": f"Bearer {token}"},
+                                                        )
+                                                        if n_resp.status_code == 200:
+                                                            nlocs = n_resp.json().get("suggestedLocations", [])
+                                                            if nlocs and nlocs[0].get("latitude"):
+                                                                lat = float(nlocs[0]["latitude"])
+                                                                lon = float(nlocs[0]["longitude"])
+                                        except Exception:
+                                            pass
 
                                 return [{
                                     "village": sub_dist,

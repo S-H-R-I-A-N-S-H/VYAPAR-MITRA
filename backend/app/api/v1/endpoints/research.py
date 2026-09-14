@@ -6,8 +6,19 @@ from fastapi import APIRouter, Depends, status
 
 from app.adapters.mappls_adapter import MapplsAdapter
 from app.adapters.supabase_adapter import supabase_adapter
-from app.core.errors import ResourceNotFoundException
+from app.core.config import settings
+from app.core.errors import (
+    ForbiddenOperationException,
+    ResourceNotFoundException,
+    ServiceUnavailableException,
+)
 from app.core.security import get_current_user
+from app.utils import (
+    require_db,
+    should_use_offline_fallback,
+    verify_business_ownership,
+    verify_research_project_ownership,
+)
 from app.schemas.common import APIResponse
 from app.schemas.evidence import ConflictItem, EvidenceCreate, EvidenceItem
 from app.schemas.research import (
@@ -46,6 +57,7 @@ async def create_research_project(
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     db = _get_db()
+    verify_business_ownership(db, proj_in.business_id, current_user)
     now = datetime.now(timezone.utc)
     proj_id = str(uuid.uuid4())
 
@@ -77,6 +89,7 @@ async def create_research_project(
                 # Seed questions
                 for cat, q_text in base_questions:
                     db.table("research_questions").insert({
+                        "id": str(uuid.uuid4()),
                         "research_project_id": proj_id,
                         "question": q_text,
                         "category": cat,
@@ -90,7 +103,7 @@ async def create_research_project(
                     data=ResearchProjectResponse(
                         id=str(rec["id"]),
                         business_id=str(rec["business_id"]),
-                        location_id=str(rec["location_id"]),
+                        location_id=str(rec["location_id"]) if rec.get("location_id") else None,
                         status=rec["status"],
                         created_at=datetime.fromisoformat(rec["created_at"]),
                         updated_at=datetime.fromisoformat(rec["updated_at"]),
@@ -99,6 +112,8 @@ async def create_research_project(
                 )
         except Exception as e:
             logger.warning(f"Database research project insert failed: {e}")
+            if settings.ENVIRONMENT == "production":
+                raise ServiceUnavailableException("Failed to persist research project.")
 
     # Offline sandbox fallback
     proj_record = {
@@ -133,29 +148,25 @@ async def get_research_project(
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     db = _get_db()
-    if db is not None:
-        try:
-            res = db.table("research_projects").select("*").eq("id", project_id).execute()
-            if res.data:
-                rec = res.data[0]
-                return APIResponse(
-                    success=True,
-                    data=ResearchProjectResponse(
-                        id=str(rec["id"]),
-                        business_id=str(rec["business_id"]),
-                        location_id=str(rec["location_id"]),
-                        status=rec["status"],
-                        created_at=datetime.fromisoformat(rec["created_at"]),
-                        updated_at=datetime.fromisoformat(rec["updated_at"]),
-                    ),
-                )
-        except Exception as e:
-            logger.warning(f"Database get research project failed: {e}")
+    rec = verify_research_project_ownership(db, project_id, current_user)
+    created_at = rec.get("created_at")
+    if isinstance(created_at, str):
+        created_at = datetime.fromisoformat(created_at)
+    updated_at = rec.get("updated_at")
+    if isinstance(updated_at, str):
+        updated_at = datetime.fromisoformat(updated_at)
 
-    if project_id in _OFFLINE_PROJECTS:
-        return APIResponse(success=True, data=ResearchProjectResponse(**_OFFLINE_PROJECTS[project_id]))
-
-    raise ResourceNotFoundException("ResearchProject", project_id)
+    return APIResponse(
+        success=True,
+        data=ResearchProjectResponse(
+            id=str(rec["id"]),
+            business_id=str(rec["business_id"]),
+            location_id=str(rec["location_id"]) if rec.get("location_id") else None,
+            status=rec.get("status", "ANALYSIS"),
+            created_at=created_at or datetime.now(timezone.utc),
+            updated_at=updated_at or datetime.now(timezone.utc),
+        ),
+    )
 
 
 @router.get(
@@ -168,6 +179,7 @@ async def list_project_evidence(
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     db = _get_db()
+    verify_research_project_ownership(db, project_id, current_user)
     items: List[EvidenceItem] = []
 
     if db is not None:
@@ -213,6 +225,7 @@ async def add_evidence_item(
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     db = _get_db()
+    verify_research_project_ownership(db, project_id, current_user)
     now = datetime.now(timezone.utc)
     ev_id = str(uuid.uuid4())
 

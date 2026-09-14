@@ -9,8 +9,18 @@ from app.adapters.bhashini_adapter import BhashiniAdapter
 from app.adapters.gemini_adapter import GeminiAdapter
 from app.adapters.supabase_adapter import supabase_adapter
 from app.core.config import settings
-from app.core.errors import ResourceNotFoundException
+from app.core.errors import (
+    ForbiddenOperationException,
+    ResourceNotFoundException,
+    ServiceUnavailableException,
+)
 from app.core.security import get_current_user
+from app.utils import (
+    extract_user_id,
+    require_db,
+    should_use_offline_fallback,
+    verify_session_ownership,
+)
 from app.schemas.common import APIResponse
 from app.services.prompt_service import (
     ExtractedFactor,
@@ -193,85 +203,38 @@ async def send_interview_message(
     now = datetime.now(timezone.utc)
     sanitized_content = sanitize_prompt_input(msg_in.content)
 
+    session_rec = verify_session_ownership(db, session_id, current_user)
+    language = session_rec.get("language") or "hi"
+    is_db_session = db is not None and session_id not in _OFFLINE_SESSIONS
+
     # 1. Fetch conversation history
     history: List[Dict[str, str]] = []
-    language = "hi"
-    found_in_db = False
 
-    if db is not None:
+    if is_db_session:
         try:
-            sess_res = db.table("interview_sessions").select("*").eq("id", session_id).execute()
-            if sess_res.data:
-                found_in_db = True
-                language = sess_res.data[0]["language"]
-
-                msgs_res = (
-                    db.table("interview_messages")
-                    .select("*")
-                    .eq("session_id", session_id)
-                    .order("created_at")
-                    .execute()
-                )
+            msgs_res = (
+                db.table("interview_messages")
+                .select("*")
+                .eq("session_id", session_id)
+                .order("created_at")
+                .execute()
+            )
+            if msgs_res.data:
                 for m in msgs_res.data:
                     history.append({"role": m["role"].lower(), "content": m["content"]})
         except Exception as e:
             logger.warning(f"Failed to fetch interview history from db: {e}")
 
-    if not found_in_db:
-        if session_id in _OFFLINE_SESSIONS:
-            language = _OFFLINE_SESSIONS.get(session_id, {}).get("language", "hi")
-            for m in _OFFLINE_MESSAGES.get(session_id, []):
-                history.append({"role": m["role"].lower(), "content": m["content"]})
-        elif session_id.startswith("offline-") or settings.ENVIRONMENT == "development":
-            _OFFLINE_SESSIONS[session_id] = {
-                "id": session_id,
-                "entrepreneur_id": str(current_user.get("sub") or "dev-user-default"),
-                "language": msg_in.language or "hi",
-            }
-            _OFFLINE_MESSAGES[session_id] = []
-            language = msg_in.language or "hi"
-        else:
-            raise ResourceNotFoundException("InterviewSession", session_id)
-
-        # Attempt to auto-persist missing session into DB if valid UUID format
-        if db is not None:
-            try:
-                valid_session_uuid = str(uuid.UUID(session_id))
-                user_id_raw = str(current_user.get("sub") or current_user.get("id") or "dev-user-default")
-                try:
-                    db_user_id = str(uuid.UUID(user_id_raw))
-                except ValueError:
-                    db_user_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, user_id_raw))
-
-                ent_res = db.table("entrepreneurs").select("id").eq("user_id", db_user_id).execute()
-                if ent_res.data:
-                    ent_id = str(ent_res.data[0]["id"])
-                else:
-                    new_ent = db.table("entrepreneurs").insert({
-                        "user_id": db_user_id,
-                        "full_name": "New Entrepreneur",
-                        "preferred_language": language,
-                        "available_capital": 0.0,
-                    }).execute()
-                    ent_id = str(new_ent.data[0]["id"]) if new_ent.data else db_user_id
-
-                db.table("interview_sessions").insert({
-                    "id": valid_session_uuid,
-                    "entrepreneur_id": ent_id,
-                    "status": "ACTIVE",
-                    "language": language,
-                    "started_at": now.isoformat(),
-                }).execute()
-                found_in_db = True
-            except Exception as e:
-                logger.debug(f"Auto-heal session in DB skipped: {e}")
+    if not history and session_id in _OFFLINE_MESSAGES:
+        for m in _OFFLINE_MESSAGES.get(session_id, []):
+            history.append({"role": m["role"].lower(), "content": m["content"]})
 
     # Add current user message to history
     history.append({"role": "user", "content": sanitized_content})
 
     # 2. Persist user message
     user_msg_id = str(uuid.uuid4())
-    if db is not None and found_in_db:
+    if is_db_session:
         try:
             db.table("interview_messages").insert({
                 "id": user_msg_id,
@@ -283,6 +246,8 @@ async def send_interview_message(
             }).execute()
         except Exception as e:
             logger.warning(f"Failed to insert user message in db: {e}")
+            if settings.ENVIRONMENT == "production":
+                raise ServiceUnavailableException("Failed to persist message.")
 
     if session_id in _OFFLINE_MESSAGES:
         _OFFLINE_MESSAGES[session_id].append({
@@ -332,7 +297,7 @@ async def send_interview_message(
     asst_msg_id = str(uuid.uuid4())
     asst_content = f"{ai_turn.reply}\n\n{ai_turn.next_question or ''}".strip()
 
-    if db is not None and found_in_db:
+    if is_db_session:
         try:
             db.table("interview_messages").insert({
                 "id": asst_msg_id,
@@ -344,6 +309,8 @@ async def send_interview_message(
             }).execute()
         except Exception as e:
             logger.warning(f"Failed to insert assistant message in db: {e}")
+            if settings.ENVIRONMENT == "production":
+                raise ServiceUnavailableException("Failed to persist assistant message.")
 
     if session_id in _OFFLINE_MESSAGES:
         _OFFLINE_MESSAGES[session_id].append({
@@ -366,18 +333,19 @@ async def get_interview_session(
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     db = _get_db()
+    session_rec = verify_session_ownership(db, session_id, current_user)
+
+    msgs: List[InterviewMessageItem] = []
     if db is not None:
         try:
-            sess_res = db.table("interview_sessions").select("*").eq("id", session_id).execute()
-            if sess_res.data:
-                rec = sess_res.data[0]
-                msgs_res = (
-                    db.table("interview_messages")
-                    .select("*")
-                    .eq("session_id", session_id)
-                    .order("created_at")
-                    .execute()
-                )
+            msgs_res = (
+                db.table("interview_messages")
+                .select("*")
+                .eq("session_id", session_id)
+                .order("created_at")
+                .execute()
+            )
+            if msgs_res.data:
                 msgs = [
                     InterviewMessageItem(
                         id=str(m["id"]),
@@ -387,24 +355,10 @@ async def get_interview_session(
                     )
                     for m in msgs_res.data
                 ]
-                return APIResponse(
-                    success=True,
-                    data=InterviewSessionResponse(
-                        id=str(rec["id"]),
-                        entrepreneur_id=str(rec["entrepreneur_id"]),
-                        business_id=rec.get("business_id"),
-                        status=rec["status"],
-                        language=rec["language"],
-                        started_at=datetime.fromisoformat(rec["started_at"]),
-                        completed_at=datetime.fromisoformat(rec["completed_at"]) if rec.get("completed_at") else None,
-                        messages=msgs,
-                    ),
-                )
         except Exception as e:
             logger.warning(f"Database read failed: {e}")
 
-    if session_id in _OFFLINE_SESSIONS:
-        sess = _OFFLINE_SESSIONS[session_id]
+    if not msgs and session_id in _OFFLINE_MESSAGES:
         msgs = [
             InterviewMessageItem(
                 id=m["id"],
@@ -414,12 +368,27 @@ async def get_interview_session(
             )
             for m in _OFFLINE_MESSAGES.get(session_id, [])
         ]
-        return APIResponse(
-            success=True,
-            data=InterviewSessionResponse(**sess, messages=msgs),
-        )
 
-    raise ResourceNotFoundException("InterviewSession", session_id)
+    started_at = session_rec.get("started_at")
+    if isinstance(started_at, str):
+        started_at = datetime.fromisoformat(started_at)
+    completed_at = session_rec.get("completed_at")
+    if isinstance(completed_at, str):
+        completed_at = datetime.fromisoformat(completed_at)
+
+    return APIResponse(
+        success=True,
+        data=InterviewSessionResponse(
+            id=str(session_rec["id"]),
+            entrepreneur_id=str(session_rec["entrepreneur_id"]),
+            business_id=session_rec.get("business_id"),
+            status=session_rec.get("status", "ACTIVE"),
+            language=session_rec.get("language", "hi"),
+            started_at=started_at or datetime.now(timezone.utc),
+            completed_at=completed_at,
+            messages=msgs,
+        ),
+    )
 
 
 @router.post(
@@ -432,6 +401,7 @@ async def complete_interview_session(
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     db = _get_db()
+    session_rec = verify_session_ownership(db, session_id, current_user)
     now = datetime.now(timezone.utc)
 
     if db is not None:
@@ -460,6 +430,8 @@ async def complete_interview_session(
                 )
         except Exception as e:
             logger.warning(f"Database update failed: {e}")
+            if settings.ENVIRONMENT == "production":
+                raise ServiceUnavailableException("Failed to update interview session status.")
 
     if session_id in _OFFLINE_SESSIONS:
         _OFFLINE_SESSIONS[session_id]["status"] = "COMPLETED"
@@ -490,32 +462,10 @@ async def process_voice_interview_message(
             detail="Audio payload must not be empty.",
         )
 
-    # 1. Verify session exists
+    # 1. Verify session exists and belongs to user
     db = _get_db()
-    session_lang = voice_in.language or "hi"
-    found = False
-    if db is not None:
-        try:
-            sess_res = db.table("interview_sessions").select("language").eq("id", session_id).execute()
-            if sess_res.data:
-                found = True
-                session_lang = sess_res.data[0].get("language") or session_lang
-        except Exception as e:
-            logger.warning(f"Error checking session in db: {e}")
-
-    if not found:
-        if session_id in _OFFLINE_SESSIONS:
-            session_lang = _OFFLINE_SESSIONS[session_id].get("language") or session_lang
-        elif session_id.startswith("offline-") or settings.ENVIRONMENT == "development":
-            _OFFLINE_SESSIONS[session_id] = {
-                "id": session_id,
-                "entrepreneur_id": str(current_user.get("sub") or "dev-user-default"),
-                "language": voice_in.language or "hi",
-            }
-            _OFFLINE_MESSAGES[session_id] = []
-            session_lang = voice_in.language or "hi"
-        else:
-            raise ResourceNotFoundException("InterviewSession", session_id)
+    session_rec = verify_session_ownership(db, session_id, current_user)
+    session_lang = voice_in.language or session_rec.get("language") or "hi"
 
     # 2. Transcribe voice to text via Bhashini ASR
     transcription = await bhashini_adapter.speech_to_text(cleaned_audio, lang=session_lang)

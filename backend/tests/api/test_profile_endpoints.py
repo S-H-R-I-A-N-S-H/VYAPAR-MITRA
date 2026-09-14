@@ -186,6 +186,21 @@ def test_update_profile(auth_user):
     assert "cheese_making" in patch_json["data"]["skills"]
 
 
+def test_update_profile_scheme_category(auth_user):
+    update_payload = {
+        "scheme_category": "sc",
+    }
+    patch_res = client.patch("/api/v1/profile", json=update_payload)
+    assert patch_res.status_code == 200
+    patch_json = patch_res.json()
+    assert patch_json["success"] is True
+    assert patch_json["data"]["scheme_category"] == "sc"
+
+    get_res = client.get("/api/v1/profile")
+    assert get_res.status_code == 200
+    assert get_res.json()["data"]["scheme_category"] == "sc"
+
+
 def test_create_and_get_location(auth_user):
     loc_payload = {
         "state": "Madhya Pradesh",

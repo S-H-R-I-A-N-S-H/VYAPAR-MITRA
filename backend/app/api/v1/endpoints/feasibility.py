@@ -14,6 +14,7 @@ from app.schemas.finance import FinancialSimulationResult
 from app.services.market_gap_detector import MarketGapDetector
 from app.services.opportunity_score import OpportunityScoreAnalyzer
 from app.services.risk_analyzer import RiskAnalyzer
+from app.utils import verify_business_ownership
 
 logger = logging.getLogger(__name__)
 
@@ -58,20 +59,7 @@ async def analyze_business_feasibility(
     and returns a typed FeasibilityScoreResult wrapped in APIResponse.
     """
     db = _get_db()
-    found = False
-    if db is not None:
-        try:
-            b_res = db.table("businesses").select("id").eq("id", business_id).execute()
-            if b_res.data:
-                found = True
-        except Exception as e:
-            logger.warning(f"Failed to query business in feasibility analyze: {e}")
-
-    if not found and business_id in _OFFLINE_BUSINESSES:
-        found = True
-
-    if not found and db is not None:
-        raise ResourceNotFoundException("Business", business_id)
+    verify_business_ownership(db, business_id, current_user)
 
     body = req_body or FeasibilityAnalysisRequest()
 
