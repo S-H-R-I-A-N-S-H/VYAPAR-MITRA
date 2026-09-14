@@ -29,7 +29,8 @@ class VyaparTopAppBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => Size.fromHeight(progress != null ? 68.0 : 60.0);
+  Size get preferredSize => Size.fromHeight(
+      progress != null ? 68.0 : (subtitle != null ? 66.0 : 60.0));
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +42,7 @@ class VyaparTopAppBar extends StatelessWidget implements PreferredSizeWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
               child: Row(
                 children: [
                   if (showBackButton)

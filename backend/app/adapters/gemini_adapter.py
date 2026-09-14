@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 import re
-from typing import Any, Optional, Type, TypeVar
+from typing import Optional, Type, TypeVar
 from pydantic import BaseModel
 
 from app.core.config import settings
@@ -15,8 +15,9 @@ T = TypeVar("T", bound=BaseModel)
 
 class GeminiAdapter:
     """
-    Production-grade adapter for Google Gemini Generative AI API with resilience,
-    exponential backoff retries, structured JSON output extraction, and offline fallback mode.
+    Production-grade adapter for Google Gemini Generative AI API (google-genai SDK).
+    Uses async-native google.genai.Client with exponential backoff retries,
+    structured JSON output extraction, and offline fallback mode.
     """
 
     def __init__(self):
@@ -26,12 +27,16 @@ class GeminiAdapter:
 
         if self.api_key and self.api_key.strip():
             try:
-                import google.generativeai as genai
+                from google import genai  # new google-genai package
 
-                genai.configure(api_key=self.api_key)
-                self._client = genai.GenerativeModel(self.model_name)
+                self._client = genai.Client(api_key=self.api_key)
+                logger.info(
+                    f"[GeminiAdapter] Initialized google-genai client, model={self.model_name}"
+                )
             except Exception as e:
-                logger.warning(f"Failed to initialize live Gemini client: {e}. Falling back to sandbox.")
+                logger.warning(
+                    f"[GeminiAdapter] Failed to initialize client: {e}. Falling back to sandbox."
+                )
                 self._client = None
 
     @property
@@ -45,7 +50,7 @@ class GeminiAdapter:
         user_prompt: str,
         temperature: float = 0.2,
         max_retries: int = 3,
-        timeout_seconds: float = 15.0,
+        timeout_seconds: float = 20.0,
     ) -> str:
         """
         Executes a Gemini prompt with retry resilience, timeout handling, and offline fallback.
@@ -58,36 +63,41 @@ class GeminiAdapter:
         if not self.is_live:
             return "Mock response from Gemini adapter (configure GEMINI_API_KEY for live output)."
 
-        combined_prompt = f"System: {system_instruction}\n\nUser: {user_prompt.strip()}"
+        from google.genai import types as genai_types
+
         last_exception = None
 
         for attempt in range(max_retries):
             try:
-                # Wrap synchronous generate_content in asyncio executor with timeout
-                loop = asyncio.get_running_loop()
                 response = await asyncio.wait_for(
-                    loop.run_in_executor(
-                        None,
-                        lambda: self._client.generate_content(
-                            contents=combined_prompt,
-                            generation_config={"temperature": temperature} if hasattr(self._client, "generate_content") else None
-                        )
+                    self._client.aio.models.generate_content(
+                        model=self.model_name,
+                        contents=user_prompt.strip(),
+                        config=genai_types.GenerateContentConfig(
+                            system_instruction=system_instruction,
+                            temperature=temperature,
+                            max_output_tokens=2048,
+                            automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=True),
+                        ),
                     ),
                     timeout=timeout_seconds,
                 )
-                if response and hasattr(response, "text") and response.text:
-                    return response.text.strip()
+                text = response.text
+                if text and text.strip():
+                    return text.strip()
                 raise ValueError("Empty response received from Gemini API.")
             except Exception as e:
                 last_exception = e
                 logger.warning(
-                    f"Gemini API attempt {attempt + 1}/{max_retries} failed with error: {e}"
+                    f"[GeminiAdapter] Attempt {attempt + 1}/{max_retries} failed: {e}"
                 )
                 if attempt < max_retries - 1:
                     backoff = 0.5 * (2 ** attempt)
                     await asyncio.sleep(backoff)
 
-        logger.error(f"Gemini API failed permanently after {max_retries} attempts: {last_exception}")
+        logger.error(
+            f"[GeminiAdapter] Permanently failed after {max_retries} attempts: {last_exception}"
+        )
         raise AIProviderException(
             detail=f"Gemini API service invocation failed: {str(last_exception)}",
             error_code="AI_PROVIDER_ERROR",
@@ -125,7 +135,9 @@ class GeminiAdapter:
         try:
             return response_schema.model_validate_json(clean_json)
         except Exception as e:
-            logger.error(f"Failed to parse structured JSON from model: {clean_json}. Error: {e}")
+            logger.error(
+                f"[GeminiAdapter] Failed to parse structured JSON: {clean_json[:200]}. Error: {e}"
+            )
             raise AIProviderException(
                 detail=f"AI output failed schema validation: {str(e)}",
                 error_code="AI_SCHEMA_VALIDATION_ERROR",

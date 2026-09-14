@@ -6,7 +6,12 @@ from fastapi import APIRouter, Depends, status
 
 from app.adapters.supabase_adapter import supabase_adapter
 from app.api.v1.endpoints.opportunities import _OFFLINE_BUSINESSES, _OFFLINE_VERSIONS
-from app.core.errors import ResourceNotFoundException
+from app.api.v1.endpoints.profile import _OFFLINE_PROFILES
+from app.core.errors import (
+    ForbiddenOperationException,
+    ResourceNotFoundException,
+    VyaparMitraException,
+)
 from app.core.security import get_current_user
 from app.schemas.business import (
     BusinessCreate,
@@ -26,6 +31,24 @@ def _get_db():
     return supabase_adapter.admin_client or supabase_adapter.client
 
 
+def _extract_user_id(current_user: Any) -> str:
+    if isinstance(current_user, dict):
+        return str(current_user.get("sub") or current_user.get("user_id") or current_user.get("id"))
+    if hasattr(current_user, "user_id"):
+        return str(current_user.user_id)
+    if hasattr(current_user, "id"):
+        return str(current_user.id)
+    return str(current_user)
+
+
+def _parse_datetime(val: Any) -> datetime:
+    if isinstance(val, datetime):
+        return val
+    if isinstance(val, str):
+        return datetime.fromisoformat(val)
+    return datetime.now(timezone.utc)
+
+
 @router.post(
     "/businesses",
     response_model=APIResponse[BusinessResponse],
@@ -34,9 +57,9 @@ def _get_db():
 )
 async def create_business(
     biz_in: BusinessCreate,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: Any = Depends(get_current_user),
 ):
-    user_id = str(current_user.get("sub") or current_user.get("id"))
+    user_id = _extract_user_id(current_user)
     db = _get_db()
     now = datetime.now(timezone.utc)
 
@@ -97,17 +120,21 @@ async def create_business(
                         target_customer=rec.get("target_customer"),
                         intended_market=rec.get("intended_market"),
                         scale=rec.get("scale") or "micro",
-                        created_at=datetime.fromisoformat(rec["created_at"]),
-                        updated_at=datetime.fromisoformat(rec["updated_at"]),
+                        created_at=_parse_datetime(rec["created_at"]),
+                        updated_at=_parse_datetime(rec["updated_at"]),
                     ),
                     message="Business idea created successfully.",
                 )
         except Exception as e:
             logger.warning(f"Failed to create business in database: {e}")
 
+    # Fallback to offline store
+    offline_profile = _OFFLINE_PROFILES.get(user_id)
+    entrepreneur_id = offline_profile["id"] if offline_profile else user_id
+
     biz_record = {
         "id": biz_id,
-        "entrepreneur_id": user_id,
+        "entrepreneur_id": entrepreneur_id,
         "name": biz_in.name,
         "status": "IDEA",
         "domain": biz_in.domain,
@@ -143,10 +170,10 @@ async def create_business(
     response_model=APIResponse[List[BusinessResponse]],
     summary="List all businesses for authenticated entrepreneur",
 )
-async def list_businesses(current_user: Dict[str, Any] = Depends(get_current_user)):
-    user_id = str(current_user.get("sub") or current_user.get("id"))
+async def list_businesses(current_user: Any = Depends(get_current_user)):
+    user_id = _extract_user_id(current_user)
     db = _get_db()
-    result_list = []
+    result_list: List[BusinessResponse] = []
 
     if db is not None:
         try:
@@ -168,8 +195,8 @@ async def list_businesses(current_user: Dict[str, Any] = Depends(get_current_use
                             target_customer=rec.get("target_customer"),
                             intended_market=rec.get("intended_market"),
                             scale=rec.get("scale") or "micro",
-                            created_at=datetime.fromisoformat(rec["created_at"]),
-                            updated_at=datetime.fromisoformat(rec["updated_at"]),
+                            created_at=_parse_datetime(rec["created_at"]),
+                            updated_at=_parse_datetime(rec["updated_at"]),
                         )
                     )
                 return APIResponse(success=True, data=result_list)
@@ -177,8 +204,12 @@ async def list_businesses(current_user: Dict[str, Any] = Depends(get_current_use
             logger.warning(f"Database list businesses failed: {e}")
 
     # Fallback to offline store
+    allowed_ent_ids = {user_id}
+    if user_id in _OFFLINE_PROFILES:
+        allowed_ent_ids.add(str(_OFFLINE_PROFILES[user_id].get("id")))
+
     for b_id, rec in _OFFLINE_BUSINESSES.items():
-        if rec.get("entrepreneur_id") == user_id:
+        if rec.get("entrepreneur_id") in allowed_ent_ids:
             result_list.append(BusinessResponse(**rec))
 
     return APIResponse(success=True, data=result_list)
@@ -191,14 +222,21 @@ async def list_businesses(current_user: Dict[str, Any] = Depends(get_current_use
 )
 async def get_business(
     business_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: Any = Depends(get_current_user),
 ):
+    user_id = _extract_user_id(current_user)
     db = _get_db()
+
     if db is not None:
         try:
             res = db.table("businesses").select("*").eq("id", business_id).execute()
             if res.data:
                 rec = res.data[0]
+                ent_res = db.table("entrepreneurs").select("id").eq("user_id", user_id).execute()
+                current_ent_id = str(ent_res.data[0]["id"]) if ent_res.data else None
+                if not current_ent_id or str(rec["entrepreneur_id"]) != current_ent_id:
+                    raise ForbiddenOperationException("You do not have permission to access this business.")
+
                 return APIResponse(
                     success=True,
                     data=BusinessResponse(
@@ -213,17 +251,29 @@ async def get_business(
                         target_customer=rec.get("target_customer"),
                         intended_market=rec.get("intended_market"),
                         scale=rec.get("scale") or "micro",
-                        created_at=datetime.fromisoformat(rec["created_at"]),
-                        updated_at=datetime.fromisoformat(rec["updated_at"]),
+                        created_at=_parse_datetime(rec["created_at"]),
+                        updated_at=_parse_datetime(rec["updated_at"]),
                     ),
                 )
+            else:
+                raise ResourceNotFoundException("Business", business_id)
+        except VyaparMitraException:
+            raise
         except Exception as e:
             logger.warning(f"Database get business failed: {e}")
 
     if business_id in _OFFLINE_BUSINESSES:
+        rec = _OFFLINE_BUSINESSES[business_id]
+        allowed_ent_ids = {user_id}
+        if user_id in _OFFLINE_PROFILES:
+            allowed_ent_ids.add(str(_OFFLINE_PROFILES[user_id].get("id")))
+
+        if rec.get("entrepreneur_id") not in allowed_ent_ids:
+            raise ForbiddenOperationException("You do not have permission to access this business.")
+
         return APIResponse(
             success=True,
-            data=BusinessResponse(**_OFFLINE_BUSINESSES[business_id]),
+            data=BusinessResponse(**rec),
         )
 
     raise ResourceNotFoundException("Business", business_id)
@@ -237,8 +287,9 @@ async def get_business(
 async def update_business(
     business_id: str,
     update_in: BusinessUpdate,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: Any = Depends(get_current_user),
 ):
+    user_id = _extract_user_id(current_user)
     db = _get_db()
     now = datetime.now(timezone.utc)
     updates = {k: v for k, v in update_in.model_dump().items() if v is not None}
@@ -246,6 +297,15 @@ async def update_business(
 
     if db is not None:
         try:
+            existing = db.table("businesses").select("entrepreneur_id").eq("id", business_id).execute()
+            if not existing.data:
+                raise ResourceNotFoundException("Business", business_id)
+
+            ent_res = db.table("entrepreneurs").select("id").eq("user_id", user_id).execute()
+            current_ent_id = str(ent_res.data[0]["id"]) if ent_res.data else None
+            if not current_ent_id or str(existing.data[0]["entrepreneur_id"]) != current_ent_id:
+                raise ForbiddenOperationException("You do not have permission to modify this business.")
+
             res = db.table("businesses").update(updates).eq("id", business_id).execute()
             if res.data:
                 rec = res.data[0]
@@ -263,16 +323,25 @@ async def update_business(
                         target_customer=rec.get("target_customer"),
                         intended_market=rec.get("intended_market"),
                         scale=rec.get("scale") or "micro",
-                        created_at=datetime.fromisoformat(rec["created_at"]),
-                        updated_at=datetime.fromisoformat(rec["updated_at"]),
+                        created_at=_parse_datetime(rec["created_at"]),
+                        updated_at=_parse_datetime(rec["updated_at"]),
                     ),
                     message="Business updated successfully.",
                 )
+        except VyaparMitraException:
+            raise
         except Exception as e:
             logger.warning(f"Database update business failed: {e}")
 
     if business_id in _OFFLINE_BUSINESSES:
         rec = _OFFLINE_BUSINESSES[business_id]
+        allowed_ent_ids = {user_id}
+        if user_id in _OFFLINE_PROFILES:
+            allowed_ent_ids.add(str(_OFFLINE_PROFILES[user_id].get("id")))
+
+        if rec.get("entrepreneur_id") not in allowed_ent_ids:
+            raise ForbiddenOperationException("You do not have permission to modify this business.")
+
         for k, v in updates.items():
             rec[k] = v
         rec["updated_at"] = now
@@ -294,14 +363,24 @@ async def update_business(
 async def create_business_version(
     business_id: str,
     ver_in: BusinessVersionCreate,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: Any = Depends(get_current_user),
 ):
+    user_id = _extract_user_id(current_user)
     db = _get_db()
     now = datetime.now(timezone.utc)
     ver_id = str(uuid.uuid4())
 
     if db is not None:
         try:
+            existing = db.table("businesses").select("entrepreneur_id").eq("id", business_id).execute()
+            if not existing.data:
+                raise ResourceNotFoundException("Business", business_id)
+
+            ent_res = db.table("entrepreneurs").select("id").eq("user_id", user_id).execute()
+            current_ent_id = str(ent_res.data[0]["id"]) if ent_res.data else None
+            if not current_ent_id or str(existing.data[0]["entrepreneur_id"]) != current_ent_id:
+                raise ForbiddenOperationException("You do not have permission to add versions to this business.")
+
             # Query existing version count
             count_res = db.table("business_versions").select("version_number").eq("business_id", business_id).execute()
             next_version = len(count_res.data) + 1 if count_res.data else 1
@@ -328,33 +407,46 @@ async def create_business_version(
                         business_definition=rec["business_definition"],
                         assumptions=rec.get("assumptions") or {},
                         source=rec["source"],
-                        created_at=datetime.fromisoformat(rec["created_at"]),
-                        confirmed_at=datetime.fromisoformat(rec["confirmed_at"]) if rec.get("confirmed_at") else None,
+                        created_at=_parse_datetime(rec["created_at"]),
+                        confirmed_at=_parse_datetime(rec["confirmed_at"]) if rec.get("confirmed_at") else None,
                     ),
                     message="New business version recorded.",
                 )
+        except VyaparMitraException:
+            raise
         except Exception as e:
             logger.warning(f"Database insert business_versions failed: {e}")
 
     # Offline/sandbox
-    existing_versions = _OFFLINE_VERSIONS.get(business_id, [])
-    next_ver_num = len(existing_versions) + 1
-    ver_rec = {
-        "id": ver_id,
-        "business_id": business_id,
-        "version_number": next_ver_num,
-        "business_definition": ver_in.business_definition,
-        "assumptions": ver_in.assumptions,
-        "source": ver_in.source,
-        "created_at": now,
-        "confirmed_at": now,
-    }
-    if business_id not in _OFFLINE_VERSIONS:
-        _OFFLINE_VERSIONS[business_id] = []
-    _OFFLINE_VERSIONS[business_id].append(ver_rec)
+    if business_id in _OFFLINE_BUSINESSES:
+        rec = _OFFLINE_BUSINESSES[business_id]
+        allowed_ent_ids = {user_id}
+        if user_id in _OFFLINE_PROFILES:
+            allowed_ent_ids.add(str(_OFFLINE_PROFILES[user_id].get("id")))
 
-    return APIResponse(
-        success=True,
-        data=BusinessVersionResponse(**ver_rec),
-        message="New business version recorded (sandbox mode).",
-    )
+        if rec.get("entrepreneur_id") not in allowed_ent_ids:
+            raise ForbiddenOperationException("You do not have permission to add versions to this business.")
+
+        existing_versions = _OFFLINE_VERSIONS.get(business_id, [])
+        next_ver_num = len(existing_versions) + 1
+        ver_rec = {
+            "id": ver_id,
+            "business_id": business_id,
+            "version_number": next_ver_num,
+            "business_definition": ver_in.business_definition,
+            "assumptions": ver_in.assumptions,
+            "source": ver_in.source,
+            "created_at": now,
+            "confirmed_at": now,
+        }
+        if business_id not in _OFFLINE_VERSIONS:
+            _OFFLINE_VERSIONS[business_id] = []
+        _OFFLINE_VERSIONS[business_id].append(ver_rec)
+
+        return APIResponse(
+            success=True,
+            data=BusinessVersionResponse(**ver_rec),
+            message="New business version recorded (sandbox mode).",
+        )
+
+    raise ResourceNotFoundException("Business", business_id)

@@ -1,7 +1,12 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:vyapar_mitra/app/router.dart';
+import 'package:vyapar_mitra/core/network/api_client.dart';
+import 'package:vyapar_mitra/core/providers/app_providers.dart';
 import 'package:vyapar_mitra/core/theme/app_theme.dart';
 
 void main() {
@@ -13,8 +18,61 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
+      final mockHttp = MockClient((request) async {
+        if (request.url.path.endsWith('/businesses')) {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'id': 'biz-e2e-created-001',
+                'entrepreneur_id': 'ent-e2e-profile-001',
+                'name': 'Cold-Press Mustard Oil Mill',
+                'status': 'IDEA',
+                'domain': 'Agri-Processing & Food Products',
+                'product_or_service': 'Cold-Press Mustard Oil Mill',
+                'scale': 'micro',
+                'created_at': DateTime.now().toIso8601String(),
+                'updated_at': DateTime.now().toIso8601String(),
+              },
+              'message': 'Business idea created successfully.',
+            }),
+            201,
+          );
+        }
+
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'id': 'ent-e2e-profile-001',
+              'user_id': 'mock-user-dev-001',
+              'full_name': 'Ramesh Kumar',
+              'preferred_language': 'hi',
+              'voice_enabled': true,
+              'available_capital': 60000.0,
+              'skills': ['machinery'],
+              'interests': [],
+              'risk_preference': 'moderate',
+              'scheme_category': 'general',
+              'created_at': DateTime.now().toIso8601String(),
+              'updated_at': DateTime.now().toIso8601String(),
+            },
+            'message': 'Profile created successfully.',
+          }),
+          201,
+        );
+      });
+
       await tester.pumpWidget(
         ProviderScope(
+          overrides: [
+            apiClientProvider.overrideWith(
+              (ref) => ApiClient(
+                httpClient: mockHttp,
+                authToken: 'mock-user-dev-001',
+              ),
+            ),
+          ],
           child: MaterialApp(
             title: 'Vyapar Mitra',
             theme: AppTheme.lightTheme,

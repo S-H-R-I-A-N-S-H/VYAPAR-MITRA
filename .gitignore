@@ -53,6 +53,8 @@ app.*.map.json
 !.env.example
 .env.local
 .env.*.local
+*.a.conf
+*.a.olf
 
 # Python / FastAPI
 __pycache__/

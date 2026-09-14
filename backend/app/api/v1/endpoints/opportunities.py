@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, Field
 
 from app.adapters.supabase_adapter import supabase_adapter
+from app.api.v1.endpoints.profile import _OFFLINE_PROFILES
 from app.core.security import get_current_user
 from app.schemas.business import BusinessResponse
 from app.schemas.common import APIResponse
@@ -23,6 +24,24 @@ _OFFLINE_VERSIONS: Dict[str, List[Dict[str, Any]]] = {}
 
 def _get_db():
     return supabase_adapter.admin_client or supabase_adapter.client
+
+
+def _extract_user_id(current_user: Any) -> str:
+    if isinstance(current_user, dict):
+        return str(current_user.get("sub") or current_user.get("user_id") or current_user.get("id"))
+    if hasattr(current_user, "user_id"):
+        return str(current_user.user_id)
+    if hasattr(current_user, "id"):
+        return str(current_user.id)
+    return str(current_user)
+
+
+def _parse_datetime(val: Any) -> datetime:
+    if isinstance(val, datetime):
+        return val
+    if isinstance(val, str):
+        return datetime.fromisoformat(val)
+    return datetime.now(timezone.utc)
 
 
 class OpportunityDiscoverInput(BaseModel):
@@ -49,9 +68,9 @@ class OpportunitySelectInput(BaseModel):
 )
 async def discover_opportunities(
     req: OpportunityDiscoverInput,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: Any = Depends(get_current_user),
 ):
-    user_id = str(current_user.get("sub") or current_user.get("id"))
+    user_id = _extract_user_id(current_user)
     db = _get_db()
 
     skills = list(req.skills)
@@ -105,9 +124,9 @@ async def discover_opportunities(
 async def select_opportunity(
     opportunity_id: str,
     choice: OpportunitySelectInput,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: Any = Depends(get_current_user),
 ):
-    user_id = str(current_user.get("sub") or current_user.get("id"))
+    user_id = _extract_user_id(current_user)
     db = _get_db()
     now = datetime.now(timezone.utc)
 
@@ -167,8 +186,8 @@ async def select_opportunity(
                         target_customer=rec.get("target_customer"),
                         intended_market=rec.get("intended_market"),
                         scale=rec.get("scale") or "micro",
-                        created_at=datetime.fromisoformat(rec["created_at"]),
-                        updated_at=datetime.fromisoformat(rec["updated_at"]),
+                        created_at=_parse_datetime(rec["created_at"]),
+                        updated_at=_parse_datetime(rec["updated_at"]),
                     ),
                     message="Opportunity selected and business idea created.",
                 )
@@ -176,9 +195,12 @@ async def select_opportunity(
             logger.warning(f"Database opportunity selection insert failed: {e}")
 
     # Offline/mock store
+    offline_profile = _OFFLINE_PROFILES.get(user_id)
+    entrepreneur_id = offline_profile["id"] if offline_profile else user_id
+
     biz_record = {
         "id": biz_id,
-        "entrepreneur_id": user_id,
+        "entrepreneur_id": entrepreneur_id,
         "name": choice.title,
         "status": "IDEA",
         "domain": choice.domain,
