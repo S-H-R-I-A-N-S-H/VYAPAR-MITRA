@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "info"
     PORT: int = 8000
     HOST: str = "0.0.0.0"
+    DEV_ALLOW_ANONYMOUS: bool = False
 
     # Supabase
     SUPABASE_URL: str = ""

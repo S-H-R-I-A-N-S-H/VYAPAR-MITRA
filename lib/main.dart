@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app/app.dart';
+import 'core/maps/mappls_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Mappls SDK
+  await MapplsService.initialize();
 
   // Initialize Supabase when credentials are provided via --dart-define
   const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
@@ -14,6 +18,7 @@ Future<void> main() async {
     try {
       await Supabase.initialize(
         url: supabaseUrl,
+        // ignore: deprecated_member_use
         anonKey: supabaseAnonKey,
       );
     } catch (e) {

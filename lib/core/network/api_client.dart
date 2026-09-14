@@ -22,8 +22,9 @@ class ApiClient {
   String? _authToken;
 
   ApiClient({http.Client? httpClient, String? authToken})
-      : _httpClient = httpClient ?? http.Client(),
-        _authToken = authToken;
+      : _httpClient = httpClient ?? http.Client() {
+    _authToken = authToken;
+  }
 
   /// Returns the currently active authentication token, if any.
   String? get authToken => _authToken;

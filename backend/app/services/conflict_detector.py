@@ -41,15 +41,15 @@ class ConflictDetector:
         """
         conflicts: List[ConflictItem] = []
         secondary = [e for e in evidence_records if e.source_type in ["GOVERNMENT", "TRUSTED_WEB"]]
-        primary = [e for e in evidence_records if e.source_type in ["FIELD_PRIMARY", "LOCAL_SURVEY"]]
+        primary = [e for e in evidence_records if e.source_type in ["FIELD_PRIMARY", "LOCAL_SURVEY", "MAPPLS_POI"]]
 
         # Check for Demand / Pricing / Competition discrepancies
         for sec in secondary:
             for prim in primary:
-                # 1. Qualitative Demand conflict
                 sec_lower = sec.claim.lower()
                 prim_lower = prim.claim.lower()
 
+                # 1. Qualitative Demand conflict
                 if "high demand" in sec_lower and (
                     "low interest" in prim_lower or "no demand" in prim_lower
                 ):
@@ -94,7 +94,31 @@ class ConflictDetector:
                         )
                     )
 
-                # 3. Numerical Pricing Discrepancy (variance > 20%)
+                # 3. Competition Density Discrepancy (e.g. secondary claimed low competition, but Mappls finds active local competitors)
+                elif ("low competition" in sec_lower or "no competition" in sec_lower or "unmet demand" in sec_lower) and (
+                    "competitor" in prim_lower or "registered locally" in prim_lower
+                ):
+                    conflicts.append(
+                        ConflictItem(
+                            id=f"conflict-comp-{sec.id}-{prim.id}",
+                            topic="Competitor Density",
+                            secondary_claim=sec.claim,
+                            secondary_source=sec.source_name,
+                            primary_claim=prim.claim,
+                            primary_source=prim.source_name,
+                            discrepancy_explanation=(
+                                f"Secondary research assumed low market competition ('{sec.claim}'), "
+                                f"but ground geospatial intelligence verified active local competitors ('{prim.claim}')."
+                            ),
+                            impact_on_confidence="high_risk",
+                            suggested_action=(
+                                "Conduct field survey on competitor pricing, operating hours, and customer dissatisfaction "
+                                "to find a clear differentiation angle."
+                            ),
+                        )
+                    )
+
+                # 4. Numerical Pricing Discrepancy (variance > 20%)
                 elif sec.extracted_value and prim.extracted_value:
                     try:
                         val_sec = float(sec.extracted_value.strip())
