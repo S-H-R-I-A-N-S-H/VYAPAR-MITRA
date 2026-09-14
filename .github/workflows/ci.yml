@@ -1,0 +1,53 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "supabase/**"
+      - ".github/workflows/ci.yml"
+      - "Dockerfile"
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "supabase/**"
+      - ".github/workflows/ci.yml"
+      - "Dockerfile"
+
+jobs:
+  test:
+    name: Lint & Test Suite
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Verify Application Boot
+        run: |
+          python -c "import sys; sys.path.insert(0, 'backend'); import app.main; print('Boot successful:', app.main.app.title)"
+
+      - name: Run Unit Tests
+        run: |
+          pytest backend/tests/unit/ -v
+
+      - name: Run API Integration Tests
+        run: |
+          pytest backend/tests/api/ -v

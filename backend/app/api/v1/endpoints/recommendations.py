@@ -11,8 +11,14 @@ from app.api.v1.endpoints.profile import _OFFLINE_LOCATIONS, _OFFLINE_PROFILES
 from app.api.v1.endpoints.research import _OFFLINE_EVIDENCE, _OFFLINE_PROJECTS
 from app.api.v1.endpoints.finance import _OFFLINE_SCENARIOS
 from app.core.errors import ResourceNotFoundException
-from app.core.security import get_current_user
+from app.core.security import AuthenticatedUser, get_current_user
 from app.schemas.common import APIResponse
+from app.schemas.recommendations import (
+    ActionPlanMilestone,
+    FinalRecommendationResponse,
+    RiskMitigation,
+    SWOTAnalysis,
+)
 from app.services.conflict_detector import ConflictDetector
 from app.services.financial_engine import FinancialEngine, FinancialSimulationInput
 from app.services.prompt_service import PromptService
@@ -32,44 +38,6 @@ def _get_db():
 
 
 # ---------------------------------------------------------------------------
-# Schemas
-# ---------------------------------------------------------------------------
-
-class SWOTAnalysis(BaseModel):
-    strengths: List[str]
-    weaknesses: List[str]
-    opportunities: List[str]
-    threats: List[str]
-
-
-class RiskMitigation(BaseModel):
-    risk: str
-    mitigation: str
-
-
-class ActionPlanMilestone(BaseModel):
-    week: int
-    title: str
-    deliverables: List[str]
-    validation_checkpoint: str
-
-
-class FinalRecommendationResponse(BaseModel):
-    business_id: str
-    business_name: str
-    verdict: str = Field(
-        description="PROCEED_WITH_PILOT, NEEDS_MORE_EVIDENCE, CAUTION_FINANCIAL_STRESS, PIVOT"
-    )
-    confidence_score: float = Field(ge=0.0, le=1.0)
-    executive_rationale: str
-    swot_analysis: SWOTAnalysis
-    identified_risks_and_mitigations: List[RiskMitigation]
-    four_week_action_plan: List[ActionPlanMilestone]
-    key_evidence_citations: List[str]
-    eligible_schemes: List[str]
-
-
-# ---------------------------------------------------------------------------
 # Recommendation Synthesis Endpoint
 # ---------------------------------------------------------------------------
 
@@ -80,7 +48,7 @@ class FinalRecommendationResponse(BaseModel):
 )
 async def get_business_recommendation(
     business_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     db = _get_db()
     biz_name = "Enterprise"

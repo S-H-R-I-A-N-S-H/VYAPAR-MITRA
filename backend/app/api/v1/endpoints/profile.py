@@ -11,7 +11,7 @@ from app.core.errors import (
     ServiceUnavailableException,
     VyaparMitraException,
 )
-from app.core.security import get_current_user
+from app.core.security import AuthenticatedUser, get_current_user
 from app.schemas.common import APIResponse
 from app.schemas.profile import (
     EntrepreneurProfileCreate,
@@ -174,22 +174,28 @@ async def create_profile(
     response_model=APIResponse[EntrepreneurProfileResponse],
     summary="Get current user's profile",
 )
-async def get_profile(current_user: Any = Depends(get_current_user)):
+async def get_profile(current_user: AuthenticatedUser = Depends(get_current_user)):
     user_id = _extract_user_id(current_user)
     db = _get_db()
 
     if db is not None:
         try:
-            res = db.table("entrepreneurs").select("*").eq("user_id", user_id).execute()
+            # Single join query to collapse 3 database calls into 1 (FIX MED-1)
+            res = (
+                db.table("entrepreneurs")
+                .select("*, locations(*), entrepreneur_eligibility_profile(*)")
+                .eq("user_id", user_id)
+                .execute()
+            )
             if res.data:
                 record = res.data[0]
                 scheme_category = "general"
-                try:
-                    elig_res = db.table("entrepreneur_eligibility_profile").select("category").eq("entrepreneur_id", record["id"]).execute()
-                    if elig_res.data:
-                        scheme_category = elig_res.data[0].get("category") or "general"
-                except Exception:
-                    pass
+                elig_data = record.get("entrepreneur_eligibility_profile")
+                if elig_data:
+                    if isinstance(elig_data, list) and len(elig_data) > 0:
+                        scheme_category = elig_data[0].get("category") or "general"
+                    elif isinstance(elig_data, dict):
+                        scheme_category = elig_data.get("category") or "general"
 
                 return APIResponse(
                     success=True,
@@ -213,6 +219,7 @@ async def get_profile(current_user: Any = Depends(get_current_user)):
             logger.warning(f"Database read failed: {e}")
             if is_production():
                 raise ServiceUnavailableException("Database service unavailable.")
+
 
     if user_id in _OFFLINE_PROFILES:
         return APIResponse(

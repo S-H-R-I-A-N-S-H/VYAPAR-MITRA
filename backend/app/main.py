@@ -98,6 +98,29 @@ logging.getLogger().addFilter(_context_filter)
 for handler in logging.getLogger().handlers:
     handler.addFilter(_context_filter)
 
+from contextlib import asynccontextmanager
+
+# ---------------------------------------------------------------------------
+# Application Lifespan (Startup & Graceful Shutdown - FIX INFRA4)
+# ---------------------------------------------------------------------------
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info(
+        f"Starting Vyapar Mitra Backend API v1.0.0 [env={settings.ENVIRONMENT}]"
+    )
+    try:
+        from app.adapters.supabase_adapter import supabase_adapter
+        if supabase_adapter.is_connected:
+            logger.info("Supabase database adapter initialized successfully.")
+        else:
+            logger.warning("Supabase database connection not ready or in sandbox/offline mode.")
+    except Exception as exc:
+        logger.warning(f"Database pre-flight check warning on startup: {exc}")
+    yield
+    logger.info("Shutting down Vyapar Mitra Backend API cleanly.")
+
+
 # ---------------------------------------------------------------------------
 # FastAPI Application
 # ---------------------------------------------------------------------------
@@ -106,7 +129,9 @@ app = FastAPI(
     title="VYAPAR MITRA Backend API",
     description="Full-Lifecycle Evidence-Based Advisory & Smart Financing for Rural Micro-Entrepreneurs",
     version="1.0.0",
+    lifespan=lifespan,
 )
+
 
 # ---------------------------------------------------------------------------
 # CORS Middleware

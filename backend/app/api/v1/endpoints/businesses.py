@@ -13,7 +13,7 @@ from app.core.errors import (
     ServiceUnavailableException,
     VyaparMitraException,
 )
-from app.core.security import get_current_user
+from app.core.security import AuthenticatedUser, get_current_user
 from app.schemas.business import (
     BusinessCreate,
     BusinessResponse,
@@ -21,7 +21,8 @@ from app.schemas.business import (
     BusinessVersionCreate,
     BusinessVersionResponse,
 )
-from app.schemas.common import APIResponse
+from app.schemas.common import APIResponse, PaginationParams
+
 from app.utils import (
     extract_user_id,
     is_production,
@@ -164,7 +165,10 @@ async def create_business(
     response_model=APIResponse[List[BusinessResponse]],
     summary="List all businesses for authenticated entrepreneur",
 )
-async def list_businesses(current_user: Any = Depends(get_current_user)):
+async def list_businesses(
+    pagination: PaginationParams = Depends(),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
     user_id = _extract_user_id(current_user)
     db = _get_db()
     result_list: List[BusinessResponse] = []
@@ -174,7 +178,15 @@ async def list_businesses(current_user: Any = Depends(get_current_user)):
             ent_res = db.table("entrepreneurs").select("id").eq("user_id", user_id).execute()
             if ent_res.data:
                 entrepreneur_id = str(ent_res.data[0]["id"])
-                res = db.table("businesses").select("*").eq("entrepreneur_id", entrepreneur_id).execute()
+                start, end = pagination.range_offset()
+                res = (
+                    db.table("businesses")
+                    .select("*, business_versions(*)")
+                    .eq("entrepreneur_id", entrepreneur_id)
+                    .order("created_at", desc=True)
+                    .range(start, end)
+                    .execute()
+                )
                 for rec in res.data:
                     result_list.append(
                         BusinessResponse(
@@ -206,7 +218,9 @@ async def list_businesses(current_user: Any = Depends(get_current_user)):
         if rec.get("entrepreneur_id") in allowed_ent_ids:
             result_list.append(BusinessResponse(**rec))
 
-    return APIResponse(success=True, data=result_list)
+    paginated_fallback = result_list[pagination.offset : pagination.offset + pagination.limit]
+    return APIResponse(success=True, data=paginated_fallback)
+
 
 
 @router.get(

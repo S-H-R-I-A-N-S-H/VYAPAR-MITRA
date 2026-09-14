@@ -14,8 +14,23 @@ class APIResponse(BaseModel, Generic[T]):
 
 
 class PaginationParams(BaseModel):
-    page: int = Field(default=1, ge=1)
-    page_size: int = Field(default=20, ge=1, le=100)
+    page: int = Field(default=1, ge=1, description="Page number (1-indexed)")
+    page_size: int = Field(default=20, ge=1, le=100, description="Items per page (1 to 100)")
+
+    @property
+    def offset(self) -> int:
+        return (self.page - 1) * self.page_size
+
+    @property
+    def limit(self) -> int:
+        return self.page_size
+
+    def range_offset(self) -> tuple[int, int]:
+        """Returns 0-indexed inclusive (start, end) range tuple for PostgREST .range(start, end)."""
+        start = self.offset
+        end = start + self.page_size - 1
+        return (start, end)
+
 
 
 class DatabaseHealth(BaseModel):

@@ -13,7 +13,7 @@ from app.core.errors import (
     ResourceNotFoundException,
     ServiceUnavailableException,
 )
-from app.core.security import get_current_user
+from app.core.security import AuthenticatedUser, get_current_user
 from app.utils import (
     require_db,
     should_use_offline_fallback,
@@ -22,8 +22,13 @@ from app.utils import (
 )
 from app.schemas.common import APIResponse
 from app.schemas.finance import (
+    FinancialScenarioCreate,
+    FinancialScenarioResponse,
     FinancialSimulationInput,
     FinancialSimulationResult,
+    WhatIfCase,
+    WhatIfInput,
+    WhatIfResponse,
 )
 from app.services.financial_engine import FinancialEngine
 from app.services.prompt_service import (
@@ -45,50 +50,6 @@ def _get_db():
 
 
 # ---------------------------------------------------------------------------
-# Schemas
-# ---------------------------------------------------------------------------
-
-class FinancialScenarioCreate(BaseModel):
-    business_id: str
-    scenario_name: str = "Base Scenario"
-    total_project_cost: float = Field(gt=0)
-    own_capital: float = Field(ge=0)
-    annual_interest_rate_pct: float = Field(default=9.5, ge=0, le=36.0)
-    tenure_months: int = Field(default=36, ge=6, le=120)
-    projected_monthly_revenue: float = Field(ge=0)
-    projected_monthly_operating_cost: float = Field(ge=0)
-
-
-class FinancialScenarioResponse(BaseModel):
-    id: str
-    business_id: str
-    scenario_name: str
-    simulation_result: FinancialSimulationResult
-    explanation: Optional[FinancialExplanationResponse] = None
-    created_at: datetime
-
-
-class WhatIfInput(BaseModel):
-    revenue_drop_pct: float = Field(default=20.0, ge=0, le=100.0)
-    cost_increase_pct: float = Field(default=10.0, ge=0, le=100.0)
-    interest_rate_delta_pct: float = Field(default=0.0, ge=-5.0, le=10.0)
-
-
-class WhatIfCase(BaseModel):
-    monthly_profit: float
-    net_cash_flow: float
-    dscr: float
-    affordability_risk_level: str
-
-
-class WhatIfResponse(BaseModel):
-    scenario_id: str
-    base_case: WhatIfCase
-    stressed_case: WhatIfCase
-    stress_summary: str
-
-
-# ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 
@@ -99,8 +60,9 @@ class WhatIfResponse(BaseModel):
 )
 async def simulate_financials(
     payload: FinancialSimulationInput,
-    current_user: Dict[str, Any] = Depends(get_current_user),  # FIX CRIT-3: was unauthenticated
+    current_user: AuthenticatedUser = Depends(get_current_user),  # FIX CRIT-3: was unauthenticated
 ):
+
     """
     Executes authoritative deterministic financial modeling.
     Calculates EMI, cash flow, DSCR, and affordability risk.
@@ -121,7 +83,7 @@ async def simulate_financials(
 )
 async def create_financial_scenario(
     scen_in: FinancialScenarioCreate,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     db = _get_db()
     verify_business_ownership(db, scen_in.business_id, current_user)
@@ -276,7 +238,7 @@ async def create_financial_scenario(
 )
 async def get_financial_scenario(
     scenario_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     db = _get_db()
     rec = verify_financial_scenario_ownership(db, scenario_id, current_user)
@@ -315,7 +277,7 @@ async def get_financial_scenario(
 async def run_what_if_stress_test(
     scenario_id: str,
     stress_in: WhatIfInput,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     db = _get_db()
     rec = verify_financial_scenario_ownership(db, scenario_id, current_user)

@@ -12,14 +12,17 @@ from app.core.errors import (
     ResourceNotFoundException,
     ServiceUnavailableException,
 )
-from app.core.security import get_current_user
+from app.core.security import AuthenticatedUser, get_current_user
 from app.utils import (
+    extract_user_id,
+    get_user_entrepreneur_ids,
     require_db,
     should_use_offline_fallback,
     verify_business_ownership,
     verify_research_project_ownership,
 )
-from app.schemas.common import APIResponse
+from app.schemas.common import APIResponse, PaginationParams
+
 from app.schemas.evidence import ConflictItem, EvidenceCreate, EvidenceItem
 from app.schemas.research import (
     ResearchProjectCreate,
@@ -139,13 +142,75 @@ async def create_research_project(
 
 
 @router.get(
+    "/research/projects",
+    response_model=APIResponse[List[ResearchProjectResponse]],
+    summary="List all research projects for authenticated entrepreneur",
+)
+async def list_research_projects(
+    business_id: Optional[str] = None,
+    pagination: PaginationParams = Depends(),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    user_id = extract_user_id(current_user)
+    db = _get_db()
+    results: List[ResearchProjectResponse] = []
+
+    if db is not None:
+        try:
+            ent_ids = get_user_entrepreneur_ids(db, user_id)
+            if ent_ids:
+                biz_res = db.table("businesses").select("id").in_("entrepreneur_id", ent_ids).execute()
+                allowed_biz_ids = [str(b["id"]) for b in (biz_res.data or [])]
+                if business_id:
+                    allowed_biz_ids = [b for b in allowed_biz_ids if b == business_id]
+
+                if allowed_biz_ids:
+                    start, end = pagination.range_offset()
+                    p_res = (
+                        db.table("research_projects")
+                        .select("*, locations(*), businesses(*)")
+                        .in_("business_id", allowed_biz_ids)
+                        .order("created_at", desc=True)
+                        .range(start, end)
+                        .execute()
+                    )
+                    for rec in (p_res.data or []):
+                        created_at = rec.get("created_at")
+                        if isinstance(created_at, str):
+                            created_at = datetime.fromisoformat(created_at)
+                        updated_at = rec.get("updated_at")
+                        if isinstance(updated_at, str):
+                            updated_at = datetime.fromisoformat(updated_at)
+                        results.append(
+                            ResearchProjectResponse(
+                                id=str(rec["id"]),
+                                business_id=str(rec["business_id"]),
+                                location_id=str(rec["location_id"]) if rec.get("location_id") else None,
+                                status=rec.get("status", "ANALYSIS"),
+                                created_at=created_at or datetime.now(timezone.utc),
+                                updated_at=updated_at or datetime.now(timezone.utc),
+                            )
+                        )
+                    return APIResponse(success=True, data=results)
+        except Exception as e:
+            logger.warning(f"Database list research projects failed: {e}")
+
+    for p_id, rec in _OFFLINE_PROJECTS.items():
+        if not business_id or rec.get("business_id") == business_id:
+            results.append(ResearchProjectResponse(**rec))
+
+    paginated_fallback = results[pagination.offset : pagination.offset + pagination.limit]
+    return APIResponse(success=True, data=paginated_fallback)
+
+
+@router.get(
     "/research/projects/{project_id}",
     response_model=APIResponse[ResearchProjectResponse],
     summary="Get research project details",
 )
 async def get_research_project(
     project_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     db = _get_db()
     rec = verify_research_project_ownership(db, project_id, current_user)
@@ -176,15 +241,26 @@ async def get_research_project(
 )
 async def list_project_evidence(
     project_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    pagination: Optional[PaginationParams] = None,
 ):
+    if pagination is None:
+        pagination = PaginationParams()
     db = _get_db()
     verify_research_project_ownership(db, project_id, current_user)
     items: List[EvidenceItem] = []
 
     if db is not None:
         try:
-            res = db.table("evidence").select("*").eq("research_project_id", project_id).execute()
+            start, end = pagination.range_offset()
+            res = (
+                db.table("evidence")
+                .select("*")
+                .eq("research_project_id", project_id)
+                .order("created_at", desc=True)
+                .range(start, end)
+                .execute()
+            )
             for r in res.data:
                 items.append(
                     EvidenceItem(
@@ -210,7 +286,9 @@ async def list_project_evidence(
     for r in _OFFLINE_EVIDENCE.get(project_id, []):
         items.append(EvidenceItem(**r))
 
-    return APIResponse(success=True, data=items)
+    paginated_fallback = items[pagination.offset : pagination.offset + pagination.limit]
+    return APIResponse(success=True, data=paginated_fallback)
+
 
 
 @router.post(
@@ -298,9 +376,9 @@ async def add_evidence_item(
 )
 async def get_project_conflicts(
     project_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
-    ev_list_res = await list_project_evidence(project_id, current_user)
+    ev_list_res = await list_project_evidence(project_id=project_id, current_user=current_user)
     evidence_items = ev_list_res.data or []
 
     conflicts = await conflict_detector.analyze_and_resolve(evidence_items)
@@ -318,9 +396,9 @@ async def get_project_conflicts(
 )
 async def get_project_uncertainty(
     project_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
-    ev_list_res = await list_project_evidence(project_id, current_user)
+    ev_list_res = await list_project_evidence(project_id=project_id, current_user=current_user)
     evidence_items = ev_list_res.data or []
 
     report = await conflict_detector.generate_uncertainty_report(evidence_items)
@@ -339,7 +417,7 @@ async def discover_project_competitors(
     project_id: str,
     category: Optional[str] = None,
     radius_km: float = 5.0,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     # Verify project exists
     await get_research_project(project_id, current_user)

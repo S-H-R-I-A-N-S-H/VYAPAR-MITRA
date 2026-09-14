@@ -14,7 +14,15 @@ from app.core.errors import (
     ResourceNotFoundException,
     ServiceUnavailableException,
 )
-from app.core.security import get_current_user
+from app.core.security import AuthenticatedUser, get_current_user
+from app.schemas.interview import (
+    InterviewMessageInput,
+    InterviewMessageItem,
+    InterviewSessionCreate,
+    InterviewSessionResponse,
+    VoiceTurnInput,
+    VoiceTurnResponse,
+)
 from app.utils import (
     extract_user_id,
     require_db,
@@ -46,61 +54,6 @@ def _get_db():
 
 
 # ---------------------------------------------------------------------------
-# Schemas
-# ---------------------------------------------------------------------------
-
-class InterviewSessionCreate(BaseModel):
-    language: str = Field(default="hi", description="ISO language code, e.g. hi, en, mr, gu")
-    business_id: Optional[str] = None
-
-
-class InterviewMessageInput(BaseModel):
-    content: str = Field(..., min_length=1, description="Entrepreneur message")
-    language: Optional[str] = None
-
-    @field_validator("content")
-    @classmethod
-    def validate_non_empty(cls, v: str) -> str:
-        cleaned = v.strip()
-        if not cleaned:
-            raise ValueError("Message content must not be blank or whitespace only.")
-        return cleaned
-
-
-class InterviewMessageItem(BaseModel):
-    id: str
-    role: str
-    content: str
-    created_at: datetime
-
-
-class InterviewSessionResponse(BaseModel):
-    id: str
-    entrepreneur_id: str
-    business_id: Optional[str] = None
-    status: str
-    language: str
-    started_at: datetime
-    completed_at: Optional[datetime] = None
-    messages: List[InterviewMessageItem] = Field(default_factory=list)
-
-
-class VoiceTurnInput(BaseModel):
-    audio_base64: str = Field(..., min_length=1, description="Base64 encoded audio bytes from mobile microphone")
-    language: Optional[str] = None
-
-
-class VoiceTurnResponse(BaseModel):
-    transcribed_text: str
-    reply: str
-    next_question: Optional[str] = None
-    language: str
-    audio_response_base64: str
-    extracted_factors: List[ExtractedFactor] = Field(default_factory=list)
-    is_complete: bool = False
-
-
-# ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 
@@ -112,8 +65,9 @@ class VoiceTurnResponse(BaseModel):
 )
 async def create_interview_session(
     session_in: InterviewSessionCreate,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
+
     user_id = str(current_user.get("sub") or current_user.get("id"))
     db = _get_db()
     now = datetime.now(timezone.utc)
@@ -197,7 +151,7 @@ async def create_interview_session(
 async def send_interview_message(
     session_id: str,
     msg_in: InterviewMessageInput,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     db = _get_db()
     now = datetime.now(timezone.utc)
@@ -330,7 +284,7 @@ async def send_interview_message(
 )
 async def get_interview_session(
     session_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     db = _get_db()
     session_rec = verify_session_ownership(db, session_id, current_user)
@@ -398,7 +352,7 @@ async def get_interview_session(
 )
 async def complete_interview_session(
     session_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     db = _get_db()
     session_rec = verify_session_ownership(db, session_id, current_user)
@@ -453,7 +407,7 @@ async def complete_interview_session(
 async def process_voice_interview_message(
     session_id: str,
     voice_in: VoiceTurnInput,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     cleaned_audio = voice_in.audio_base64.strip()
     if not cleaned_audio:
