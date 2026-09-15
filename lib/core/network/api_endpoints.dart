@@ -10,18 +10,18 @@ class ApiEndpoints {
       return customUrl;
     }
     if (kIsWeb) {
-      return 'http://10.201.133.160:8000/api/v1';
+      return 'http://192.168.137.232:8000/api/v1';
     }
     try {
       if (Platform.isAndroid) {
         // Works seamlessly with `adb reverse tcp:8000 tcp:8000` for physical devices
         // and defaults to 10.0.2.2 for Android Studio emulators
-        return 'http://10.201.133.160:8000/api/v1';
+        return 'http://192.168.137.232:8000/api/v1';
       }
     } catch (_) {
       // Fallback for non-mobile platforms
     }
-    return 'http://10.201.133.160:8000/api/v1';
+    return 'http://192.168.137.232:8000/api/v1';
   }
 
   // Health
