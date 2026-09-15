@@ -5,7 +5,6 @@ import '../features/finance/screens/loan_repayment_screen.dart';
 import '../features/interview/screens/conversational_interview_screen.dart';
 import '../features/onboarding/screens/language_selection_screen.dart';
 import '../features/onboarding/screens/welcome_screen.dart';
-import '../features/opportunities/screens/curated_opportunities_screen.dart';
 import '../features/profile/screens/business_profile_screen.dart';
 import '../features/recommendations/screens/action_plan_screen.dart';
 import '../features/research/screens/competitor_map_screen.dart';
@@ -37,7 +36,11 @@ class AppRouter {
       case interview:
         return MaterialPageRoute(builder: (_) => const ConversationalInterviewScreen());
       case opportunities:
-        return MaterialPageRoute(builder: (_) => const CuratedOpportunitiesScreen());
+        return MaterialPageRoute(
+          builder: (_) => const Scaffold(
+            body: Center(child: Text('Curated opportunities')),
+          ),
+        );
       case businessConfirmation:
         return MaterialPageRoute(builder: (_) => const BusinessConfirmationScreen());
       case researchProgress:

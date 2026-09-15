@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/providers/app_providers.dart';
-import '../../../core/theme/app_colors.dart';
+
 import '../../../core/theme/app_typography.dart';
 
 class BusinessAdvisorScreen extends ConsumerStatefulWidget {
@@ -37,7 +36,10 @@ class _BusinessAdvisorScreenState extends ConsumerState<BusinessAdvisorScreen> {
           children: [
             // --- CUSTOM APP BAR ---
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 10.0,
+              ),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 border: Border(
@@ -46,29 +48,14 @@ class _BusinessAdvisorScreenState extends ConsumerState<BusinessAdvisorScreen> {
               ),
               child: Row(
                 children: [
-                  // Back Button
-                  InkWell(
-                    onTap: () => Navigator.maybePop(context),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFFE5E0DA)),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.arrow_back, size: 20, color: Colors.black),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  
                   // Avatar with Online Dot
                   Stack(
                     children: [
                       const CircleAvatar(
                         radius: 18,
                         backgroundImage: NetworkImage(
-                            'https://i.pravatar.cc/150?img=11'), // Placeholder for advisor image
+                          'https://i.pravatar.cc/150?img=11',
+                        ), // Placeholder for advisor image
                       ),
                       Positioned(
                         right: 0,
@@ -86,7 +73,7 @@ class _BusinessAdvisorScreenState extends ConsumerState<BusinessAdvisorScreen> {
                     ],
                   ),
                   const SizedBox(width: 10),
-                  
+
                   // Titles
                   Expanded(
                     child: Column(
@@ -94,7 +81,7 @@ class _BusinessAdvisorScreenState extends ConsumerState<BusinessAdvisorScreen> {
                       children: [
                         Text(
                           'Business Advisor AI',
-                          style: AppTypography.titleMedium.copyWith(
+                          style: AppTypography.bodyMedium.copyWith(
                             fontWeight: FontWeight.w900,
                             color: Colors.black,
                             fontSize: 16,
@@ -111,10 +98,13 @@ class _BusinessAdvisorScreenState extends ConsumerState<BusinessAdvisorScreen> {
                       ],
                     ),
                   ),
-                  
+
                   // Global Listen Button
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       border: Border.all(color: const Color(0xFFF0D5C9)),
                       borderRadius: BorderRadius.circular(16),
@@ -122,7 +112,11 @@ class _BusinessAdvisorScreenState extends ConsumerState<BusinessAdvisorScreen> {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.volume_up_outlined, size: 16, color: _orangeAccent),
+                        Icon(
+                          Icons.volume_up_outlined,
+                          size: 16,
+                          color: _orangeAccent,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           'Listen',
@@ -153,12 +147,18 @@ class _BusinessAdvisorScreenState extends ConsumerState<BusinessAdvisorScreen> {
             // --- CHAT HISTORY AREA ---
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 16.0,
+                ),
                 children: [
                   // Date Pill
                   Center(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
@@ -183,14 +183,20 @@ class _BusinessAdvisorScreenState extends ConsumerState<BusinessAdvisorScreen> {
                       margin: const EdgeInsets.only(top: 12),
                       padding: const EdgeInsets.only(top: 12),
                       decoration: const BoxDecoration(
-                        border: Border(top: BorderSide(color: Color(0xFFF3EFEA))),
+                        border: Border(
+                          top: BorderSide(color: Color(0xFFF3EFEA)),
+                        ),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.graphic_eq, size: 14, color: _orangeAccent),
+                              Icon(
+                                Icons.graphic_eq,
+                                size: 14,
+                                color: _orangeAccent,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 'Listen (0:12)',
@@ -220,7 +226,7 @@ class _BusinessAdvisorScreenState extends ConsumerState<BusinessAdvisorScreen> {
                     text: 'I have 4 years of experience with agricultural crops and farm machinery.',
                   ),
                   const SizedBox(height: 4),
-                  
+
                   // Sent Status
                   Align(
                     alignment: Alignment.centerRight,
@@ -235,7 +241,11 @@ class _BusinessAdvisorScreenState extends ConsumerState<BusinessAdvisorScreen> {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        const Icon(Icons.done_all, size: 14, color: Color(0xFF10B981)),
+                        const Icon(
+                          Icons.done_all,
+                          size: 14,
+                          color: Color(0xFF10B981),
+                        ),
                       ],
                     ),
                   ),
@@ -247,7 +257,10 @@ class _BusinessAdvisorScreenState extends ConsumerState<BusinessAdvisorScreen> {
                     text: 'That is valuable. In your Sanwer area, do you have direct access to raw mustard or oilseed crops, or a storage shed?',
                     bottomWidget: Container(
                       margin: const EdgeInsets.only(top: 12),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFEEF9F1), // Soft green
                         borderRadius: BorderRadius.circular(8),
@@ -255,7 +268,11 @@ class _BusinessAdvisorScreenState extends ConsumerState<BusinessAdvisorScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.check_circle_outline, size: 16, color: Color(0xFF166534)),
+                          const Icon(
+                            Icons.check_circle_outline,
+                            size: 16,
+                            color: Color(0xFF166534),
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -301,8 +318,14 @@ class _BusinessAdvisorScreenState extends ConsumerState<BusinessAdvisorScreen> {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      _buildQuickResponseChip(Icons.agriculture_outlined, 'Direct farm access'),
-                      _buildQuickResponseChip(Icons.storefront_outlined, 'Have storage space'),
+                      _buildQuickResponseChip(
+                        Icons.agriculture_outlined,
+                        'Direct farm access',
+                      ),
+                      _buildQuickResponseChip(
+                        Icons.storefront_outlined,
+                        'Have storage space',
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -338,7 +361,11 @@ class _BusinessAdvisorScreenState extends ConsumerState<BusinessAdvisorScreen> {
                               color: Colors.white.withValues(alpha: 0.2),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.mic_none, size: 18, color: Colors.white),
+                            child: const Icon(
+                              Icons.mic_none,
+                              size: 18,
+                              color: Colors.white,
+                            ),
                           ),
                         ],
                       ),
@@ -364,20 +391,29 @@ class _BusinessAdvisorScreenState extends ConsumerState<BusinessAdvisorScreen> {
                                   controller: _chatController,
                                   decoration: InputDecoration(
                                     hintText: 'Type your answer...',
-                                    hintStyle: AppTypography.bodyMedium.copyWith(color: const Color(0xFFB3AAA1)),
+                                    hintStyle: AppTypography.bodyMedium
+                                        .copyWith(
+                                          color: const Color(0xFFB3AAA1),
+                                        ),
                                     border: InputBorder.none,
                                     isDense: true,
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
                                   ),
                                 ),
                               ),
-                              const Icon(Icons.mic_none, color: Color(0xFFB3AAA1), size: 22),
+                              const Icon(
+                                Icons.mic_none,
+                                color: Color(0xFFB3AAA1),
+                                size: 22,
+                              ),
                             ],
                           ),
                         ),
                       ),
                       const SizedBox(width: 12),
-                      
+
                       // Send Button
                       Container(
                         width: 48,
@@ -387,14 +423,18 @@ class _BusinessAdvisorScreenState extends ConsumerState<BusinessAdvisorScreen> {
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
-                          icon: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 20),
+                          icon: const Icon(
+                            Icons.arrow_upward_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                           onPressed: () {},
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Skip Link
                   Center(
                     child: InkWell(
@@ -513,3 +553,5 @@ class _BusinessAdvisorScreenState extends ConsumerState<BusinessAdvisorScreen> {
     );
   }
 }
+
+typedef CuratedOpportunitiesScreen = BusinessAdvisorScreen;

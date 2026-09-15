@@ -1,7 +1,9 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+
 import '../../../core/audio/voice_service.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_endpoints.dart';
@@ -157,7 +159,9 @@ class _ConversationalInterviewScreenState
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('माइक्रोफ़ोन की अनुमति आवश्यक है • Microphone permission is required.'),
+              content: Text(
+                'माइक्रोफ़ोन की अनुमति आवश्यक है • Microphone permission is required.',
+              ),
               duration: Duration(seconds: 3),
             ),
           );
@@ -192,18 +196,18 @@ class _ConversationalInterviewScreenState
       final sessionId = _sessionId ?? 'offline-session-temp';
       final response = await _apiClient.post(
         ApiEndpoints.interviewVoice(sessionId),
-        body: {
-          'audio_base64': audioBase64,
-          'language': lang,
-        },
+        body: {'audio_base64': audioBase64, 'language': lang},
       );
 
       if (response != null && response['data'] != null) {
         final data = response['data'];
-        final transcribed = data['transcribed_text'] as String? ?? 'आवाज़ इनपुट • Voice Input';
+        final transcribed =
+            data['transcribed_text'] as String? ?? 'आवाज़ इनपुट • Voice Input';
         final reply = data['reply'] as String? ?? '';
         final nextQ = data['next_question'] as String?;
-        final combinedReply = (nextQ != null && nextQ.isNotEmpty) ? '$reply\n\n$nextQ' : reply;
+        final combinedReply = (nextQ != null && nextQ.isNotEmpty)
+            ? '$reply\n\n$nextQ'
+            : reply;
         final audioB64 = data['audio_response_base64'] as String?;
 
         if (mounted) {
@@ -222,8 +226,12 @@ class _ConversationalInterviewScreenState
                 isUser: false,
                 time: nowTime,
                 insightBadge: _turnCount >= 2
-                    ? (isHindi ? '35% PMEGP सब्सिडी के लिए पात्र' : 'Eligible for 35% PMEGP subsidy')
-                    : (isHindi ? 'स्थानीय मांग सत्यापित' : 'Verified local market demand'),
+                    ? (isHindi
+                          ? '35% PMEGP सब्सिडी के लिए पात्र'
+                          : 'Eligible for 35% PMEGP subsidy')
+                    : (isHindi
+                          ? 'स्थानीय मांग सत्यापित'
+                          : 'Verified local market demand'),
                 audioBase64: audioB64,
               ),
             );
@@ -250,11 +258,11 @@ class _ConversationalInterviewScreenState
 
       final fallbackReply = _turnCount == 1
           ? (isHindi
-              ? 'यह बहुत अच्छा हुनर है! आपके क्षेत्र ${profile.block.isNotEmpty ? profile.block : "पुणे"} में कच्चा दूध सीधे किसानों से मिल सकता है। क्या आपके पास भंडारण शेड उपलब्ध है?'
-              : 'That is valuable experience! In your ${profile.block} area, do you have direct access to raw mustard/oilseed crops, or do you have a storage space?')
+                ? 'यह बहुत अच्छा हुनर है! आपके क्षेत्र ${profile.block.isNotEmpty ? profile.block : "पुणे"} में कच्चा दूध सीधे किसानों से मिल सकता है। क्या आपके पास भंडारण शेड उपलब्ध है?'
+                : 'That is valuable experience! In your ${profile.block} area, do you have direct access to raw mustard/oilseed crops, or do you have a storage space?')
           : (isHindi
-              ? 'बिल्कुल सही! आपके ₹${(profile.personalCapital / 1000).toStringAsFixed(0)}K निजी बजट और अनुभव के आधार पर हमने 3 अत्यधिक व्यवहार्य अवसर तैयार कर लिए हैं।'
-              : 'Understood! Based on your experience and ₹${(profile.personalCapital / 1000).toStringAsFixed(0)}K capital, we have curated 3 high-viability business opportunities for you.');
+                ? 'बिल्कुल सही! आपके ₹${(profile.personalCapital / 1000).toStringAsFixed(0)}K निजी बजट और अनुभव के आधार पर हमने 3 अत्यधिक व्यवहार्य अवसर तैयार कर लिए हैं।'
+                : 'Understood! Based on your experience and ₹${(profile.personalCapital / 1000).toStringAsFixed(0)}K capital, we have curated 3 high-viability business opportunities for you.');
 
       setState(() {
         _messages.add(
@@ -291,11 +299,7 @@ class _ConversationalInterviewScreenState
 
     setState(() {
       _messages.add(
-        ChatMessage(
-          text: text.trim(),
-          isUser: true,
-          time: nowTime,
-        ),
+        ChatMessage(text: text.trim(), isUser: true, time: nowTime),
       );
       _inputController.clear();
       _isAiResponding = true;
@@ -312,18 +316,16 @@ class _ConversationalInterviewScreenState
       final sessionId = _sessionId ?? 'offline-session-temp';
       final response = await _apiClient.post(
         ApiEndpoints.interviewMessages(sessionId),
-        body: {
-          'content': text.trim(),
-          'language': lang,
-        },
+        body: {'content': text.trim(), 'language': lang},
       );
 
       if (response != null && response['data'] != null) {
         final data = response['data'] as Map<String, dynamic>;
         final reply = (data['reply'] as String?) ?? '';
         final nextQ = data['next_question'] as String?;
-        final combinedReply =
-            (nextQ != null && nextQ.isNotEmpty) ? '$reply\n\n$nextQ' : reply;
+        final combinedReply = (nextQ != null && nextQ.isNotEmpty)
+            ? '$reply\n\n$nextQ'
+            : reply;
 
         // Build insight badge from extracted_factors if present
         String? badge;
@@ -337,8 +339,12 @@ class _ConversationalInterviewScreenState
           }
         }
         badge ??= _turnCount >= 2
-            ? (isHindi ? '35% PMEGP सब्सिडी के लिए पात्र' : 'Eligible for 35% PMEGP subsidy')
-            : (isHindi ? 'स्थानीय मांग सत्यापित' : 'Verified local market demand');
+            ? (isHindi
+                  ? '35% PMEGP सब्सिडी के लिए पात्र'
+                  : 'Eligible for 35% PMEGP subsidy')
+            : (isHindi
+                  ? 'स्थानीय मांग सत्यापित'
+                  : 'Verified local market demand');
 
         if (mounted) {
           setState(() {
@@ -357,18 +363,20 @@ class _ConversationalInterviewScreenState
         return; // ✓ live response handled
       }
     } catch (e) {
-      debugPrint('[Interview] Backend call failed: $e — using offline fallback');
+      debugPrint(
+        '[Interview] Backend call failed: $e — using offline fallback',
+      );
     }
 
     // ── Offline / sandbox fallback ───────────────────────────────────────────
     if (mounted) {
       final fallbackReply = _turnCount == 1
           ? (isHindi
-              ? 'यह बहुत अच्छा हुनर है! आपके क्षेत्र ${profile.block} में कच्चा माल सीधे किसानों से मिल सकता है। क्या आपके पास भंडारण शेड है?'
-              : 'That is valuable experience! In your ${profile.block} area, do you have direct access to raw crops, or a storage space?')
+                ? 'यह बहुत अच्छा हुनर है! आपके क्षेत्र ${profile.block} में कच्चा माल सीधे किसानों से मिल सकता है। क्या आपके पास भंडारण शेड है?'
+                : 'That is valuable experience! In your ${profile.block} area, do you have direct access to raw crops, or a storage space?')
           : (isHindi
-              ? 'बिल्कुल सही! आपके ₹${(profile.personalCapital / 1000).toStringAsFixed(0)}K बजट और अनुभव के आधार पर हमने 3 अवसर तैयार किए हैं।'
-              : 'Understood! Based on your ₹${(profile.personalCapital / 1000).toStringAsFixed(0)}K capital, we have curated 3 high-viability opportunities for you.');
+                ? 'बिल्कुल सही! आपके ₹${(profile.personalCapital / 1000).toStringAsFixed(0)}K बजट और अनुभव के आधार पर हमने 3 अवसर तैयार किए हैं।'
+                : 'Understood! Based on your ₹${(profile.personalCapital / 1000).toStringAsFixed(0)}K capital, we have curated 3 high-viability opportunities for you.');
 
       setState(() {
         _isAiResponding = false;
@@ -378,8 +386,12 @@ class _ConversationalInterviewScreenState
             isUser: false,
             time: DateFormat('hh:mm a').format(DateTime.now()),
             insightBadge: _turnCount >= 2
-                ? (isHindi ? '35% PMEGP सब्सिडी के लिए पात्र' : 'Eligible for 35% PMEGP subsidy')
-                : (isHindi ? 'स्थानीय मांग सत्यापित' : 'Verified local market demand'),
+                ? (isHindi
+                      ? '35% PMEGP सब्सिडी के लिए पात्र'
+                      : 'Eligible for 35% PMEGP subsidy')
+                : (isHindi
+                      ? 'स्थानीय मांग सत्यापित'
+                      : 'Verified local market demand'),
           ),
         );
       });
@@ -422,16 +434,24 @@ class _ConversationalInterviewScreenState
               color: AppColors.surface,
               child: Row(
                 children: [
-                  const Icon(Icons.psychology_rounded, size: 18, color: AppColors.secondary),
+                  const Icon(
+                    Icons.psychology_rounded,
+                    size: 18,
+                    color: AppColors.secondary,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
-                          _buildFactorChip('₹${(profile.personalCapital / 1000).toStringAsFixed(0)}K Budget'),
+                          _buildFactorChip(
+                            '₹${(profile.personalCapital / 1000).toStringAsFixed(0)}K Budget',
+                          ),
                           const SizedBox(width: 8),
-                          _buildFactorChip('District: ${profile.district} (Mappls POI)'),
+                          _buildFactorChip(
+                            'District: ${profile.district} (Mappls POI)',
+                          ),
                           const SizedBox(width: 8),
                           _buildFactorChip('Bhashini 2-Way Voice'),
                         ],
@@ -513,7 +533,10 @@ class _ConversationalInterviewScreenState
 
             // Text input bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 4.0,
+              ),
               child: Row(
                 children: [
                   Expanded(
@@ -555,13 +578,20 @@ class _ConversationalInterviewScreenState
             // Discover Opportunities Button (visible when >= 1 turn)
             if (_turnCount >= 1)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 4.0,
+                ),
                 child: PrimaryButton(
                   label: isHindi
                       ? 'अवसर खोजें • View Opportunities'
                       : 'Discover Opportunities →',
                   onPressed: () {
-                    Navigator.pushNamed(context, '/opportunities');
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/opportunities',
+                      (route) => false,
+                    );
                   },
                 ),
               ),
@@ -619,7 +649,11 @@ class _ConversationalInterviewScreenState
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.mic_rounded, size: 14, color: AppColors.secondary),
+                    const Icon(
+                      Icons.mic_rounded,
+                      size: 14,
+                      color: AppColors.secondary,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'Voice Input',
@@ -659,7 +693,10 @@ class _ConversationalInterviewScreenState
               if (msg.insightBadge != null) ...[
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.infoBg,
                     borderRadius: BorderRadius.circular(8),
@@ -668,8 +705,11 @@ class _ConversationalInterviewScreenState
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.check_circle_rounded,
-                          size: 14, color: AppColors.tertiary),
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        size: 14,
+                        color: AppColors.tertiary,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         msg.insightBadge!,
@@ -688,12 +728,15 @@ class _ConversationalInterviewScreenState
                 children: [
                   InkWell(
                     onTap: () {
-                      if (msg.audioBase64 != null && msg.audioBase64!.isNotEmpty) {
+                      if (msg.audioBase64 != null &&
+                          msg.audioBase64!.isNotEmpty) {
                         _voiceService.playAudioFromBase64(msg.audioBase64!);
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('ऑडियो प्लेबैक तैयार है • Audio ready.'),
+                            content: Text(
+                              'ऑडियो प्लेबैक तैयार है • Audio ready.',
+                            ),
                             duration: Duration(seconds: 1),
                           ),
                         );
@@ -701,11 +744,17 @@ class _ConversationalInterviewScreenState
                     },
                     borderRadius: BorderRadius.circular(8),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 4.0),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 2.0,
+                        horizontal: 4.0,
+                      ),
                       child: Row(
                         children: [
-                          const Icon(Icons.volume_up_rounded,
-                              size: 16, color: AppColors.secondary),
+                          const Icon(
+                            Icons.volume_up_rounded,
+                            size: 16,
+                            color: AppColors.secondary,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             'Listen',
