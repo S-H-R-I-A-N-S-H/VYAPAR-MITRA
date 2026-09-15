@@ -3,382 +3,412 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../shared/widgets/primary_button.dart';
-import '../../../shared/widgets/tactile_card.dart';
-import '../../../shared/widgets/vyapar_top_app_bar.dart';
 
-class OpportunityItem {
-  final String title;
-  final String domain;
-  final int fitPercentage;
-  final String capital;
-  final double rawCapital;
-  final double monthlyRevenue;
-  final double monthlyCosts;
-  final double monthlyEmi;
-  final double netCash;
-  final String demand;
-  final String competition;
-  final String whyFits;
-  final String majorRisk;
-  final String subsidyScheme;
-
-  const OpportunityItem({
-    required this.title,
-    required this.domain,
-    required this.fitPercentage,
-    required this.capital,
-    required this.rawCapital,
-    required this.monthlyRevenue,
-    required this.monthlyCosts,
-    required this.monthlyEmi,
-    required this.netCash,
-    required this.demand,
-    required this.competition,
-    required this.whyFits,
-    required this.majorRisk,
-    required this.subsidyScheme,
-  });
-}
-
-/// Screen 5: Curated Business Opportunities
-/// Stitch Reference: Screen 74d92a0ffcbe4c13a1146ee0379871c8
-class CuratedOpportunitiesScreen extends ConsumerStatefulWidget {
-  const CuratedOpportunitiesScreen({super.key});
+class BusinessAdvisorScreen extends ConsumerStatefulWidget {
+  const BusinessAdvisorScreen({super.key});
 
   @override
-  ConsumerState<CuratedOpportunitiesScreen> createState() =>
-      _CuratedOpportunitiesScreenState();
+  ConsumerState<BusinessAdvisorScreen> createState() =>
+      _BusinessAdvisorScreenState();
 }
 
-class _CuratedOpportunitiesScreenState
-    extends ConsumerState<CuratedOpportunitiesScreen> {
-  int _selectedIndex = 0;
+class _BusinessAdvisorScreenState extends ConsumerState<BusinessAdvisorScreen> {
+  final TextEditingController _chatController = TextEditingController();
 
-  final List<OpportunityItem> _opportunities = const [
-    OpportunityItem(
-      title: 'Cold-Press Mustard Oil Mill',
-      domain: 'Agri-Processing & Food Products',
-      fitPercentage: 92,
-      capital: '₹1.80 Lakh',
-      rawCapital: 180000.0,
-      monthlyRevenue: 62000.0,
-      monthlyCosts: 33500.0,
-      monthlyEmi: 3100.0,
-      netCash: 25400.0,
-      demand: 'High',
-      competition: 'Moderate',
-      whyFits: 'Matches your machinery skills and utilizes local Mandi surplus seed.',
-      majorRisk: 'Seed price fluctuations during off-season monsoon months.',
-      subsidyScheme: 'Eligible for 35% PMEGP grant + Mudra loan',
-    ),
-    OpportunityItem(
-      title: 'Organic Compost & Fertilizer Unit',
-      domain: 'Agri-Inputs & Bio-Nutrients',
-      fitPercentage: 84,
-      capital: '₹85,000',
-      rawCapital: 85000.0,
-      monthlyRevenue: 38000.0,
-      monthlyCosts: 18000.0,
-      monthlyEmi: 1500.0,
-      netCash: 18500.0,
-      demand: 'Growing',
-      competition: 'Low',
-      whyFits: 'Zero raw material expense using cow dung & crop residues.',
-      majorRisk: 'Requires 45 days maturation cycle before first batch sale.',
-      subsidyScheme: 'Eligible for Mudra Shishu ₹50k collateral-free loan',
-    ),
-    OpportunityItem(
-      title: 'Cattle Feed & Grain Depot',
-      domain: 'Livestock & Rural Retail',
-      fitPercentage: 78,
-      capital: '₹1.20 Lakh',
-      rawCapital: 120000.0,
-      monthlyRevenue: 52000.0,
-      monthlyCosts: 36000.0,
-      monthlyEmi: 2200.0,
-      netCash: 13800.0,
-      demand: 'Constant',
-      competition: 'Moderate',
-      whyFits: 'Daily cash sales to village dairy farmers.',
-      majorRisk: 'Credit demand from local farmers requires working capital.',
-      subsidyScheme: 'Eligible for Mudra Kishore + PMEGP',
-    ),
-  ];
+  // Colors based on the UI design
+  final Color _bgColor = const Color(0xFFF9F4EE);
+  final Color _darkBrown = const Color(0xFF2C1004);
+  final Color _orangeAccent = const Color(0xFFC14D24);
+  final Color _userBubble = const Color(0xFF132A40); // Dark navy blue
+  final Color _textMuted = const Color(0xFF8B7F76);
 
-  void _confirmSelection() {
-    final chosen = _opportunities[_selectedIndex];
-
-    ref.read(selectedBusinessProvider.notifier).selectBusiness(
-          SelectedBusinessState(
-            title: chosen.title,
-            domain: chosen.domain,
-            estimatedCapital: chosen.rawCapital,
-            monthlyRevenue: chosen.monthlyRevenue,
-            monthlyOperatingCosts: chosen.monthlyCosts,
-            monthlyEmi: chosen.monthlyEmi,
-            netCashMonthly: chosen.netCash,
-            status: 'IDEA',
-            schemeEligible: chosen.subsidyScheme,
-          ),
-        );
-
-    Navigator.pushNamed(context, '/business-confirmation');
+  @override
+  void dispose() {
+    _chatController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isHindi = ref.watch(localeProvider).languageCode == 'hi';
-    final profile = ref.watch(businessProfileProvider);
-
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: VyaparTopAppBar(
-        title: 'VYAPAR MITRA',
-        stepText: '3 Found',
-      ),
+      backgroundColor: _bgColor,
       body: SafeArea(
         child: Column(
           children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Recommendation Header
-                    Row(
+            // --- CUSTOM APP BAR ---
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  bottom: BorderSide(color: Color(0xFFE5E0DA), width: 1),
+                ),
+              ),
+              child: Row(
+                children: [
+                  // Back Button
+                  InkWell(
+                    onTap: () => Navigator.maybePop(context),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0xFFE5E0DA)),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.arrow_back, size: 20, color: Colors.black),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  
+                  // Avatar with Online Dot
+                  Stack(
+                    children: [
+                      const CircleAvatar(
+                        radius: 18,
+                        backgroundImage: NetworkImage(
+                            'https://i.pravatar.cc/150?img=11'), // Placeholder for advisor image
+                      ),
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981), // Emerald green
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 10),
+                  
+                  // Titles
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.verified_rounded,
-                            size: 16, color: AppColors.secondary),
-                        const SizedBox(width: 6),
                         Text(
-                          isHindi
-                              ? 'आपके लिए विशेष रूप से अनुशंसित'
-                              : 'RECOMMENDED FOR YOU',
+                          'Business Advisor AI',
+                          style: AppTypography.titleMedium.copyWith(
+                            fontWeight: FontWeight.w900,
+                            color: Colors.black,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          'VYAPAR MITRA • Discovery Step 2 of 4',
                           style: AppTypography.labelSmall.copyWith(
-                            color: AppColors.secondary,
-                            fontWeight: FontWeight.bold,
+                            color: _textMuted,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      isHindi ? 'व्यवसाय के श्रेष्ठ अवसर' : 'Curated Business Opportunities',
-                      style: AppTypography.headlineLarge.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
-                      ),
+                  ),
+                  
+                  // Global Listen Button
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: const Color(0xFFF0D5C9)),
+                      borderRadius: BorderRadius.circular(16),
+                      color: Colors.white,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      isHindi
-                          ? 'आपके अनुभव, ₹${(profile.personalCapital / 1000).toStringAsFixed(0)}K निजी बजट और ${profile.block} मंडी के आधार पर।'
-                          : 'Based on your experience, ₹${(profile.personalCapital / 1000).toStringAsFixed(0)}K capital, and ${profile.block} market signals.',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Opportunities List
-                    ..._opportunities.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final item = entry.value;
-                      final isSelected = _selectedIndex == index;
-
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 14.0),
-                        child: TactileCard(
-                          onTap: () => setState(() => _selectedIndex = index),
-                          border: Border.all(
-                            color: isSelected ? AppColors.primary : AppColors.border,
-                            width: isSelected ? 2.5 : 1.0,
+                    child: Row(
+                      children: [
+                        Icon(Icons.volume_up_outlined, size: 16, color: _orangeAccent),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Listen',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: _darkBrown,
+                            fontWeight: FontWeight.w800,
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Orange Progress Strip
+            Container(
+              height: 3,
+              width: double.infinity,
+              color: const Color(0xFFE5E0DA),
+              alignment: Alignment.centerLeft,
+              child: FractionallySizedBox(
+                widthFactor: 0.5, // Step 2 of 4
+                child: Container(color: _orangeAccent),
+              ),
+            ),
+
+            // --- CHAT HISTORY AREA ---
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+                children: [
+                  // Date Pill
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE5E0DA)),
+                      ),
+                      child: Text(
+                        'Today, 10:42 AM',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: _textMuted,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // AI Message 1
+                  _buildAiMessage(
+                    text: 'Tell me about your practical skills or what kind of work you enjoy most.',
+                    bottomWidget: Container(
+                      margin: const EdgeInsets.only(top: 12),
+                      padding: const EdgeInsets.only(top: 12),
+                      decoration: const BoxDecoration(
+                        border: Border(top: BorderSide(color: Color(0xFFF3EFEA))),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
                             children: [
-                              // Top Row: Title + Fit Badge + Checkbox
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.title,
-                                          style: AppTypography.headlineSmall.copyWith(
-                                            color: AppColors.primary,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.successBg,
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          child: Text(
-                                            '${item.fitPercentage}% Match • ${index == 0 ? "Top Recommendation" : "Viable Option"}',
-                                            style: AppTypography.labelSmall.copyWith(
-                                              color: AppColors.success,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Container(
-                                    width: 28,
-                                    height: 28,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: isSelected
-                                          ? AppColors.primary
-                                          : AppColors.surfaceVariant,
-                                    ),
-                                    child: isSelected
-                                        ? const Icon(Icons.check,
-                                            size: 18, color: Colors.white)
-                                        : null,
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 14),
-
-                              // 3 Metrics Bar (Capital, Demand, Competition)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: AppColors.surfaceContainerLow,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: AppColors.border),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                  children: [
-                                    _buildMetric('Capital', item.capital),
-                                    Container(
-                                        height: 28,
-                                        width: 1,
-                                        color: AppColors.border),
-                                    _buildMetric('Demand', item.demand,
-                                        color: AppColors.success),
-                                    Container(
-                                        height: 28,
-                                        width: 1,
-                                        color: AppColors.border),
-                                    _buildMetric('Competition', item.competition),
-                                  ],
-                                ),
-                              ),
-
-                              const SizedBox(height: 12),
-
-                              // Why it fits
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Icon(Icons.lightbulb_rounded,
-                                      size: 16, color: AppColors.secondary),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      item.whyFits,
-                                      style: AppTypography.bodySmall.copyWith(
-                                        color: AppColors.textPrimary,
-                                        height: 1.35,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 8),
-
-                              // Major Risk Warning Card
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: AppColors.warningBg,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                      color: const Color(0xFFFDE68A)),
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Icon(Icons.warning_amber_rounded,
-                                        size: 16, color: AppColors.warning),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(
-                                        'Risk: ${item.majorRisk}',
-                                        style: AppTypography.labelSmall.copyWith(
-                                          color: AppColors.warning,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              const SizedBox(height: 10),
-
-                              // Subsidy Badge
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppColors.infoBg,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                      color: const Color(0xFFC6DAEE)),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.account_balance_rounded,
-                                        size: 14, color: AppColors.info),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      item.subsidyScheme,
-                                      style: AppTypography.labelSmall.copyWith(
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
+                              Icon(Icons.graphic_eq, size: 14, color: _orangeAccent),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Listen (0:12)',
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: _orangeAccent,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
                             ],
                           ),
+                          Text(
+                            'Voice note ready',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: _textMuted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // User Message
+                  _buildUserMessage(
+                    text: 'I have 4 years of experience with agricultural crops and farm machinery.',
+                  ),
+                  const SizedBox(height: 4),
+                  
+                  // Sent Status
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '10:43 AM • Sent',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: _textMuted,
+                            fontSize: 10,
+                          ),
                         ),
-                      );
-                    }),
-                  ],
-                ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.done_all, size: 14, color: Color(0xFF10B981)),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // AI Message 2
+                  _buildAiMessage(
+                    text: 'That is valuable. In your Sanwer area, do you have direct access to raw mustard or oilseed crops, or a storage shed?',
+                    bottomWidget: Container(
+                      margin: const EdgeInsets.only(top: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEEF9F1), // Soft green
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFC1E1C5)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle_outline, size: 16, color: Color(0xFF166534)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Aligned with Mini Cold-Press Oil Mill potential',
+                              style: AppTypography.labelSmall.copyWith(
+                                color: const Color(0xFF166534),
+                                fontWeight: FontWeight.w600,
+                                height: 1.3,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
 
-            // Confirm Selection Button
+            // --- BOTTOM INPUT AREA ---
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-              color: AppColors.surface,
-              child: PrimaryButton(
-                label: isHindi
-                    ? 'यह अवसर चुनें और पुष्टि करें'
-                    : 'Confirm Selected Business →',
-                onPressed: _confirmSelection,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFDFBF8), // Slightly lighter bottom area
+                border: Border(top: BorderSide(color: Color(0xFFE5E0DA))),
+              ),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'QUICK TAP RESPONSE:',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: _textMuted,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 10,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Suggestion Chips
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildQuickResponseChip(Icons.agriculture_outlined, 'Direct farm access'),
+                      _buildQuickResponseChip(Icons.storefront_outlined, 'Have storage space'),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Big Orange Voice Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: ElevatedButton(
+                      onPressed: () {},
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _orangeAccent,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const SizedBox(width: 24), // Balance spacing
+                          Text(
+                            'Tap to Speak (Voice Answer)',
+                            style: AppTypography.labelLarge.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.mic_none, size: 18, color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Text Input Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: const Color(0xFFE5E0DA)),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _chatController,
+                                  decoration: InputDecoration(
+                                    hintText: 'Type your answer...',
+                                    hintStyle: AppTypography.bodyMedium.copyWith(color: const Color(0xFFB3AAA1)),
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                                  ),
+                                ),
+                              ),
+                              const Icon(Icons.mic_none, color: Color(0xFFB3AAA1), size: 22),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      
+                      // Send Button
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: _userBubble,
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 20),
+                          onPressed: () {},
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Skip Link
+                  Center(
+                    child: InkWell(
+                      onTap: () {},
+                      child: Text(
+                        'Skip for now',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: _darkBrown,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -387,26 +417,99 @@ class _CuratedOpportunitiesScreenState
     );
   }
 
-  Widget _buildMetric(String label, String value, {Color? color}) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: AppTypography.labelSmall.copyWith(
-            color: AppColors.textSecondary,
-            fontSize: 10,
+  // Helper for AI Messages (Left side)
+  Widget _buildAiMessage({required String text, Widget? bottomWidget}) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(right: 40),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+            bottomRight: Radius.circular(16),
+            bottomLeft: Radius.circular(4), // Pointy corner
+          ),
+          border: Border.all(color: const Color(0xFFE5E0DA), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              text,
+              style: AppTypography.bodyMedium.copyWith(
+                color: _darkBrown,
+                height: 1.4,
+                fontSize: 14,
+              ),
+            ),
+            if (bottomWidget != null) bottomWidget,
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper for User Messages (Right side)
+  Widget _buildUserMessage({required String text}) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Container(
+        margin: const EdgeInsets.only(left: 40),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _userBubble,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+            bottomLeft: Radius.circular(16),
+            bottomRight: Radius.circular(4), // Pointy corner
           ),
         ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: AppTypography.labelLarge.copyWith(
-            color: color ?? AppColors.primary,
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
+        child: Text(
+          text,
+          style: AppTypography.bodyMedium.copyWith(
+            color: Colors.white,
+            height: 1.4,
+            fontSize: 14,
           ),
         ),
-      ],
+      ),
+    );
+  }
+
+  // Helper for Quick Response Chips
+  Widget _buildQuickResponseChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE5E0DA)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: _orangeAccent),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: AppTypography.labelMedium.copyWith(
+              color: _darkBrown,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
