@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -23,27 +24,44 @@ class WelcomeScreen extends ConsumerWidget {
             children: [
               // --- TOP APP BAR ---
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 12.0,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     // Profile Icon
                     IconButton(
-                      icon: const Icon(Icons.person_outline, size: 28, color: darkBrown),
+                      icon: const Icon(
+                        Icons.person_outline,
+                        size: 28,
+                        color: darkBrown,
+                      ),
                       onPressed: () => Navigator.pushNamed(context, '/profile'),
                     ),
 
                     // Start a Venture Pill
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
-                        border: Border.all(color: darkBrown.withValues(alpha: 0.2), width: 1),
+                        border: Border.all(
+                          color: darkBrown.withValues(alpha: 0.2),
+                          width: 1,
+                        ),
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.storefront_outlined, size: 16, color: darkBrown),
+                          const Icon(
+                            Icons.storefront_outlined,
+                            size: 16,
+                            color: darkBrown,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'START A\nVENTURE',
@@ -63,14 +81,24 @@ class WelcomeScreen extends ConsumerWidget {
                     InkWell(
                       onTap: () => Navigator.pushNamed(context, '/language'),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
-                          border: Border.all(color: darkBrown.withValues(alpha: 0.2), width: 1),
+                          border: Border.all(
+                            color: darkBrown.withValues(alpha: 0.2),
+                            width: 1,
+                          ),
                           borderRadius: BorderRadius.circular(24),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.translate, size: 16, color: darkBrown),
+                            const Icon(
+                              Icons.translate,
+                              size: 16,
+                              color: darkBrown,
+                            ),
                             const SizedBox(width: 6),
                             Text(
                               'EN /\nहि',
@@ -110,7 +138,10 @@ class WelcomeScreen extends ConsumerWidget {
               // --- CENTRAL CARD ---
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 24),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 36,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
@@ -134,7 +165,7 @@ class WelcomeScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Card Title
                     Text(
                       'PLAN. VALIDATE.\nGET FUNDED.',
@@ -146,7 +177,7 @@ class WelcomeScreen extends ConsumerWidget {
                         height: 1.15,
                       ),
                     ),
-                    
+
                     const SizedBox(height: 32),
 
                     // Start Now Button
@@ -154,10 +185,11 @@ class WelcomeScreen extends ConsumerWidget {
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton(
-                        onPressed: () => Navigator.pushNamed(context, '/language'),
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/language'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: darkBrown,
-                          foregroundColor: Colors.white,
+                          backgroundColor: darkBrown, // Dark brown background
+                          foregroundColor: Colors.white, // Splash/ripple color
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
                           ),
@@ -166,13 +198,14 @@ class WelcomeScreen extends ConsumerWidget {
                         child: Text(
                           'START NOW',
                           style: AppTypography.labelLarge.copyWith(
+                            color: Colors.white, // Explicitly overriding theme color to white
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.5,
                           ),
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 16),
 
                     // Explore Schemes Button
@@ -193,6 +226,7 @@ class WelcomeScreen extends ConsumerWidget {
                         child: Text(
                           'EXPLORE SCHEMES',
                           style: AppTypography.labelLarge.copyWith(
+                            color: darkBrown, // Ensuring this stays brown
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.5,
                           ),
@@ -210,13 +244,21 @@ class WelcomeScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Column(
                   children: [
-                    _buildCheckListItem('Live Mandi prices & local demand trends', accentRed, darkBrown),
+                    _buildCheckListItem(
+                      'Live Mandi prices & local demand trends',
+                      accentRed,
+                      darkBrown,
+                    ),
                     const SizedBox(height: 12),
-                    _buildCheckListItem('Step-by-step business launch guide', accentRed, darkBrown),
+                    _buildCheckListItem(
+                      'Step-by-step business launch guide',
+                      accentRed,
+                      darkBrown,
+                    ),
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 40),
             ],
           ),
