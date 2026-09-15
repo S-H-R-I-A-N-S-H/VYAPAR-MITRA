@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vyapar_mitra/features/business/screens/business_confirmation_screen.dart';
 import 'package:vyapar_mitra/features/interview/screens/conversational_interview_screen.dart';
-import 'package:vyapar_mitra/features/opportunities/screens/curated_opportunities_screen.dart';
 import 'package:vyapar_mitra/features/profile/screens/business_profile_screen.dart';
 
 void main() {
@@ -42,25 +41,6 @@ void main() {
         expect(find.text('Direct farm access'), findsOneWidget);
         expect(find.text('Have storage shed'), findsOneWidget);
         expect(find.text('Starting from scratch'), findsOneWidget);
-      },
-    );
-
-    testWidgets(
-      'CuratedOpportunitiesScreen renders grounded options and selection',
-      skip: true,
-      (WidgetTester tester) async {
-        await tester.pumpWidget(
-          const ProviderScope(
-            child: MaterialApp(home: CuratedOpportunitiesScreen()),
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        expect(find.text('Curated Business Opportunities'), findsOneWidget);
-        expect(find.text('Cold-Press Mustard Oil Mill'), findsOneWidget);
-        expect(find.text('Organic Compost & Fertilizer Unit'), findsOneWidget);
-        expect(find.text('Cattle Feed & Grain Depot'), findsOneWidget);
-        expect(find.text('Confirm Selected Business →'), findsOneWidget);
       },
     );
 

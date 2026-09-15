@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+// import '../../../core/providers/app_providers.dart';
+// import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 
 class BusinessAdvisorScreen extends ConsumerStatefulWidget {
@@ -48,6 +50,26 @@ class _BusinessAdvisorScreenState extends ConsumerState<BusinessAdvisorScreen> {
               ),
               child: Row(
                 children: [
+                  // Back Button
+                  InkWell(
+                    onTap: () => Navigator.maybePop(context),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0xFFE5E0DA)),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back,
+                        size: 20,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+
                   // Avatar with Online Dot
                   Stack(
                     children: [
@@ -553,5 +575,3 @@ class _BusinessAdvisorScreenState extends ConsumerState<BusinessAdvisorScreen> {
     );
   }
 }
-
-typedef CuratedOpportunitiesScreen = BusinessAdvisorScreen;
