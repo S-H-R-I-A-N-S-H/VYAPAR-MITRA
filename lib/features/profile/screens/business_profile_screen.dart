@@ -4,12 +4,8 @@ import '../../../core/network/api_endpoints.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../shared/widgets/primary_button.dart';
-import '../../../shared/widgets/tactile_card.dart';
-import '../../../shared/widgets/vyapar_top_app_bar.dart';
+// import '../../../shared/widgets/vyapar_top_app_bar.dart';
 
-/// Screen 3: Mobile Business Situation & Profile Setup
-/// Stitch Reference: Screen bda550f78a554ad3a5e78c52c9c7effa
 class BusinessProfileScreen extends ConsumerStatefulWidget {
   const BusinessProfileScreen({super.key});
 
@@ -19,7 +15,7 @@ class BusinessProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
-  String _startingPosition = 'specific_idea'; // specific_idea, general_domain, explore
+  String _startingPosition = 'specific_idea'; // specific_idea, rough_idea, explore
   late TextEditingController _ideaController;
   late TextEditingController _nameController;
   double _capital = 60000;
@@ -28,9 +24,12 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
   String _socialCategory = 'general';
   bool _isLoading = false;
 
-  final List<double> _capitalPresets = [25000, 50000, 100000, 200000];
+  final List<String> _suggestions = const [
+    'Spice Grinding',
+    'Dairy Farm',
+    'Flour Mill',
+  ];
 
-  /// Madhya Pradesh districts for dropdown
   static const List<String> _mpDistricts = [
     'Agar Malwa', 'Alirajpur', 'Anuppur', 'Ashoknagar', 'Balaghat',
     'Barwani', 'Betul', 'Bhind', 'Bhopal', 'Burhanpur',
@@ -49,12 +48,23 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
   void initState() {
     super.initState();
     final profile = ref.read(businessProfileProvider);
-    _startingPosition = profile.startingPosition;
-    _ideaController = TextEditingController(text: profile.businessIdea);
-    _nameController = TextEditingController(text: profile.fullName ?? 'Ramesh Kumar');
+    _startingPosition = profile.startingPosition.isNotEmpty
+        ? profile.startingPosition
+        : 'specific_idea';
+    _ideaController = TextEditingController(
+      text: profile.businessIdea.isNotEmpty
+          ? profile.businessIdea
+          : 'Cold-Press Oil Mill',
+    );
+    _nameController =
+        TextEditingController(text: profile.fullName ?? 'Ramesh Kumar');
     _capital = profile.personalCapital;
-    // Fall back to default only if provider has no value yet
-    _district = profile.district.isNotEmpty ? profile.district : 'Indore';
+    final hasValidDistrict = profile.district.isNotEmpty &&
+        _mpDistricts.contains(profile.district);
+    _district = hasValidDistrict ? profile.district : _mpDistricts.firstWhere(
+          (district) => district == 'Indore',
+          orElse: () => _mpDistricts.first,
+        );
     _block = profile.block.isNotEmpty ? profile.block : 'Sanwer';
     _socialCategory = profile.socialCategory;
   }
@@ -66,146 +76,9 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
     super.dispose();
   }
 
-  /// Shows a location picker dialog with MP district dropdown + block free-text field.
-  Future<void> _showLocationPicker(bool isHindi) async {
-    String tempDistrict = _district;
-    final blockController = TextEditingController(text: _block);
-    final formKey = GlobalKey<FormState>();
-
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setDialogState) {
-            return AlertDialog(
-              title: Text(
-                isHindi ? 'स्थान चुनें' : 'Select Location',
-                style: AppTypography.titleLarge.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              content: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // District dropdown
-                    Text(
-                      isHindi ? 'जिला (District)' : 'District',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    DropdownButtonFormField<String>(
-                      initialValue: _mpDistricts.contains(tempDistrict) ? tempDistrict : null,
-                      decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: AppColors.border),
-                        ),
-                        hintText: isHindi ? 'जिला चुनें' : 'Select district',
-                      ),
-                      items: _mpDistricts
-                          .map((d) => DropdownMenuItem(value: d, child: Text(d)))
-                          .toList(),
-                      onChanged: (val) {
-                        if (val != null) setDialogState(() => tempDistrict = val);
-                      },
-                      validator: (val) {
-                        if (val == null || val.isEmpty) {
-                          return isHindi ? 'जिला आवश्यक है' : 'District is required';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    // Block / Taluk free text
-                    Text(
-                      isHindi ? 'ब्लॉक / तालुका' : 'Block / Taluk',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: blockController,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
-                        hintText: isHindi ? 'जैसे: सांवेर, हुज़ूर' : 'e.g. Sanwer, Huzur',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: AppColors.border),
-                        ),
-                      ),
-                      onChanged: (_) {},
-                      validator: (val) {
-                        if (val == null || val.trim().isEmpty) {
-                          return isHindi ? 'ब्लॉक आवश्यक है' : 'Block is required';
-                        }
-                        // Basic sanitisation: only letters, spaces, hyphens
-                        if (!RegExp(r'^[\p{L}\s\-]+$', unicode: true)
-                            .hasMatch(val.trim())) {
-                          return isHindi
-                              ? 'केवल अक्षर अनुमत हैं'
-                              : 'Only letters allowed';
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: Text(
-                    isHindi ? 'रद्द करें' : 'Cancel',
-                    style: AppTypography.labelMedium.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  onPressed: () {
-                    if (formKey.currentState!.validate()) {
-                      setState(() {
-                        _district = tempDistrict;
-                        _block = blockController.text.trim();
-                      });
-                      Navigator.of(ctx).pop();
-                    }
-                  },
-                  child: Text(isHindi ? 'सहेजें' : 'Save'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-    blockController.dispose();
-  }
-
   Future<void> _handleSaveAndContinue() async {
     setState(() => _isLoading = true);
 
-    // Update Riverpod state optimistically with form selections
     final updatedProfile = ref.read(businessProfileProvider).copyWith(
           fullName: _nameController.text.trim(),
           startingPosition: _startingPosition,
@@ -217,7 +90,6 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
         );
     ref.read(businessProfileProvider.notifier).updateProfile(updatedProfile);
 
-    // Save profile to backend via ApiClient matching EntrepreneurProfileCreate contract
     try {
       final apiClient = ref.read(apiClientProvider);
       final payload = {
@@ -242,8 +114,10 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
         body: payload,
       );
 
-      // Extract server-assigned entrepreneur profile UUID and persist in Riverpod
-      if (res != null && res is Map && res['data'] != null && res['data']['id'] != null) {
+      if (res != null &&
+          res is Map &&
+          res['data'] != null &&
+          res['data']['id'] != null) {
         final profileId = res['data']['id'].toString();
         ref.read(businessProfileProvider.notifier).setProfileId(profileId);
       }
@@ -268,286 +142,638 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isHindi = ref.watch(localeProvider).languageCode == 'hi';
+    const Color darkBrown = Color(0xFF2C1004);
+    const Color orangeAccent = Color(0xFFC85A32);
+    const Color bgColor = Color(0xFFFAF7F2);
+    const Color cardBg = Colors.white;
+    const Color borderColor = Color(0xFFEFE8DF);
+    const Color textMuted = Color(0xFF736A63);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: VyaparTopAppBar(
-        title: 'VYAPAR MITRA',
-        stepText: isHindi ? 'चरण 2 / 4' : 'Step 2 of 4',
-        progress: 0.5,
-      ),
+      backgroundColor: bgColor,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.auto_awesome_rounded,
-                        size: 14, color: AppColors.secondary),
-                    const SizedBox(width: 4),
-                    Text(
-                      isHindi ? 'व्यवसाय प्रोफ़ाइल' : 'BUSINESS SITUATION',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // Title
-              Text(
-                isHindi
-                    ? 'क्या आपके पास व्यवसाय का कोई विचार है?'
-                    : 'Do you have a business idea?',
-                style: AppTypography.headlineLarge.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                isHindi
-                    ? 'अपनी मौजूदा स्थिति चुनें ताकि हम सटीक मार्गदर्शन कर सकें।'
-                    : 'Select where you are starting from today.',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Option 1: Specific Idea
-              _buildOptionCard(
-                positionKey: 'specific_idea',
-                title: isHindi ? 'मेरे पास निश्चित विचार है' : 'I have a specific idea',
-                subtitle: isHindi
-                    ? 'जैसे तेल मिल, किराना स्टोर, वर्कशॉप'
-                    : 'e.g. Cold-Press Oil Mill, Agro Shop',
-                icon: Icons.check_circle_rounded,
-                child: _startingPosition == 'specific_idea'
-                    ? Padding(
-                        padding: const EdgeInsets.only(top: 10.0),
-                        child: TextField(
-                          controller: _ideaController,
-                          decoration: InputDecoration(
-                            hintText: isHindi ? 'व्यवसाय का नाम लिखें' : 'Enter your business idea',
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.mic_rounded, color: AppColors.secondary),
-                              onPressed: () {},
-                            ),
-                          ),
-                        ),
-                      )
-                    : null,
-              ),
-
-              const SizedBox(height: 12),
-
-              // Option 2: General Domain
-              _buildOptionCard(
-                positionKey: 'general_domain',
-                title: isHindi ? 'मुझे कार्य का क्षेत्र पता है' : 'I have a general domain',
-                subtitle: isHindi
-                    ? 'कृषि प्रसंस्करण, खुदरा व्यापार, स्थानीय सेवाएं'
-                    : 'Agri-processing, Rural Retail, Village Services',
-                icon: Icons.category_rounded,
-              ),
-
-              const SizedBox(height: 12),
-
-              // Option 3: Explore
-              _buildOptionCard(
-                positionKey: 'explore',
-                title: isHindi ? 'मुझे कोई विचार नहीं है (मदद करें)' : 'I don\'t have an idea yet',
-                subtitle: isHindi
-                    ? 'मेरे बजट और मंडी मांग के आधार पर सुझाव दें'
-                    : 'Recommend viable ideas matching my budget and local market',
-                icon: Icons.explore_rounded,
-              ),
-
-              const SizedBox(height: 24),
-
-              // Capital Selection Section
-              Text(
-                isHindi ? 'उपलब्ध निजी पूंजी (बजट)' : 'Available Personal Capital',
-                style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                isHindi
-                    ? 'वह राशि जो आप स्वयं लगा सकते हैं (बाकी बैंक ऋण द्वारा)'
-                    : 'Funds you can personally invest (remaining via bank subsidy loan)',
-                style: AppTypography.bodySmall,
-              ),
-
-              const SizedBox(height: 12),
-
-              // Preset Capital Chips
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _capitalPresets.map((amt) {
-                  final isSelected = _capital == amt;
-                  return ChoiceChip(
-                    label: Text(
-                      '₹${(amt / 1000).toStringAsFixed(0)}K',
-                      style: AppTypography.labelMedium.copyWith(
-                        color: isSelected ? Colors.white : AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    selected: isSelected,
-                    selectedColor: AppColors.primary,
-                    backgroundColor: AppColors.surface,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      side: BorderSide(
-                        color: isSelected ? AppColors.primary : AppColors.border,
-                      ),
-                    ),
-                    onSelected: (selected) {
-                      if (selected) setState(() => _capital = amt);
-                    },
-                  );
-                }).toList(),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Location Section
-              TactileCard(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  children: [
-                    Container(
+        child: Column(
+          children: [
+            // Top App Bar
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                children: [
+                  // Back Button Circle
+                  InkWell(
+                    onTap: () => Navigator.maybePop(context),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
                       width: 40,
                       height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.infoBg,
-                        borderRadius: BorderRadius.circular(10),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF2ECE4),
+                        shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.location_on_rounded, color: AppColors.info),
+                      child: const Icon(
+                        Icons.arrow_back,
+                        size: 20,
+                        color: darkBrown,
+                      ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  ),
+                  const SizedBox(width: 12),
+                  // Title
+                  Text(
+                    'VYAPAR MITRA',
+                    style: AppTypography.bodyMedium.copyWith(
+                
+      
+                      fontWeight: FontWeight.w900,
+                      color: darkBrown,
+                      letterSpacing: 0.5,
+                      fontSize: 18,
+                    ),
+                  ),
+                  const Spacer(),
+                  // Step Pill
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF2ECE4),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      'Step 2 of\n4',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: darkBrown,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 10,
+                        height: 1.0,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Language Pill
+                  InkWell(
+                    onTap: () => Navigator.pushNamed(context, '/language'),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF2ECE4),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        'EN / हि',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: darkBrown,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Orange Progress Indicator
+            Container(
+              height: 3,
+              width: double.infinity,
+              color: const Color(0xFFF2ECE4),
+              alignment: Alignment.centerLeft,
+              child: FractionallySizedBox(
+                widthFactor: 0.5, // 50% for Step 2 of 4
+                child: Container(
+                  color: orangeAccent,
+                ),
+              ),
+            ),
+
+            // Scrollable Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0, vertical: 14.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Business Profile Tag
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF6EDE2),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
+                          const Icon(Icons.storefront_outlined,
+                              size: 14, color: orangeAccent),
+                          const SizedBox(width: 6),
                           Text(
-                            isHindi ? 'कार्यक्षेत्र (ब्लॉक व जिला)' : 'Target Location',
+                            'BUSINESS\nPROFILE',
                             style: AppTypography.labelSmall.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          Text(
-                            '$_block, $_district (M.P.)',
-                            style: AppTypography.labelLarge.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
+                              color: darkBrown,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 9,
+                              height: 1.05,
+                              letterSpacing: 0.5,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.edit_location_alt_rounded,
-                          color: AppColors.secondary),
-                      onPressed: () => _showLocationPicker(isHindi),
+
+                    const SizedBox(height: 14),
+
+                    // Headline
+                    Text(
+                      'Do you have a business\nidea?',
+                      style: AppTypography.headlineLarge.copyWith(
+                        fontSize: 27,
+                        fontWeight: FontWeight.w900,
+                        color: darkBrown,
+                        height: 1.15,
+                      ),
                     ),
+                    const SizedBox(height: 8),
+
+                    // Subtitle
+                    Text(
+                      'Select where you are starting from today.',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: textMuted,
+                        fontSize: 14,
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Option 1: Specific Idea (Selected card)
+                    _buildSpecificIdeaCard(darkBrown, orangeAccent),
+
+                    const SizedBox(height: 12),
+
+                    // Option 2: Rough Idea
+                    _buildRadioCard(
+                      keyName: 'rough_idea',
+                      title: 'I have a rough idea',
+                      subtitle:
+                          'We will help you narrow down products and machinery.',
+                      icon: Icons.lightbulb_outline_rounded,
+                      iconBg: const Color(0xFFFDEEE7),
+                      iconColor: orangeAccent,
+                      darkBrown: darkBrown,
+                      textMuted: textMuted,
+                      borderColor: borderColor,
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Option 3: Help me find an idea
+                    _buildRadioCard(
+                      keyName: 'explore',
+                      title: 'Help me find an idea',
+                      subtitle:
+                          'Discover high-demand opportunities tailored to your area.',
+                      icon: Icons.explore_outlined,
+                      iconBg: const Color(0xFFF3ECE6),
+                      iconColor: darkBrown,
+                      darkBrown: darkBrown,
+                      textMuted: textMuted,
+                      borderColor: borderColor,
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Government Scheme Benefit Banner
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8EDE5),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.verified_user_outlined,
+                            size: 18,
+                            color: orangeAccent,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: RichText(
+                              text: TextSpan(
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: const Color(0xFF5A4A42),
+                                  fontSize: 12,
+                                  height: 1.35,
+                                ),
+                                children: const [
+                                  TextSpan(text: 'Eligible for '),
+                                  TextSpan(
+                                    text: 'PMEGP & Mudra Scheme ',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  TextSpan(
+                                    text: 'financial subsidies up to 35%.',
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
+            ),
 
-              const SizedBox(height: 24),
-
-              // Submit & Continue CTA
-              PrimaryButton(
-                label: isHindi ? 'एआई सलाहकार से बात करें' : 'Continue to AI Interview',
-                icon: Icons.arrow_forward_rounded,
-                isLoading: _isLoading,
-                onPressed: _handleSaveAndContinue,
+            // Bottom Actions Strip
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+              decoration: const BoxDecoration(
+                color: bgColor,
+                border: Border(
+                  top: BorderSide(color: borderColor, width: 1),
+                ),
               ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Tap to Speak Your Idea Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: () {},
+                      icon: const Icon(Icons.mic_none_rounded,
+                          size: 18, color: orangeAccent),
+                      label: Text(
+                        'Tap to Speak Your Idea',
+                        style: AppTypography.labelMedium.copyWith(
+                          color: darkBrown,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: cardBg,
+                        side: const BorderSide(color: Color(0xFFE2D8CC)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                      ),
+                    ),
+                  ),
 
-              const SizedBox(height: 16),
-            ],
-          ),
+                  const SizedBox(height: 10),
+
+                  // Continue Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _handleSaveAndContinue,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: darkBrown,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(26),
+                        ),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Continue',
+                                  style: AppTypography.labelLarge.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Icon(
+                                  Icons.arrow_forward_rounded,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Sub-caption next step
+                  RichText(
+                    text: TextSpan(
+                      style: AppTypography.labelSmall.copyWith(
+                        fontSize: 11,
+                        color: textMuted,
+                      ),
+                      children: const [
+                        TextSpan(text: 'Next: '),
+                        TextSpan(
+                          text: 'Step 3: Location & Hyperlocal Market',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: darkBrown,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildOptionCard({
-    required String positionKey,
+  Widget _buildSpecificIdeaCard(Color darkBrown, Color orangeAccent) {
+    final isSelected = _startingPosition == 'specific_idea';
+
+    return GestureDetector(
+      onTap: () => setState(() => _startingPosition = 'specific_idea'),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? darkBrown : const Color(0xFFEFE8DF),
+            width: isSelected ? 1.5 : 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Card Header: Checkmark, Title, Selected Tag
+            Row(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFD7F0DB),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check,
+                    size: 16,
+                    color: Color(0xFF2E7D32),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'I have a specific idea',
+                    style: AppTypography.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: darkBrown,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: darkBrown,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'SELECTED',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 14),
+
+            // Input Box with mic icon inside
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFAF7F2),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE6DFD7)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _ideaController,
+                      style: AppTypography.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: darkBrown,
+                        fontSize: 15,
+                      ),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        isDense: true,
+                        hintText: 'e.g. Cold-Press Oil Mill',
+                      ),
+                    ),
+                  ),
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: orangeAccent,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(Icons.mic, color: Colors.white, size: 20),
+                      onPressed: () {},
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Suggestions row
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                Text(
+                  'Suggestions:',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: const Color(0xFF8B7F76),
+                    fontSize: 12,
+                  ),
+                ),
+                ..._suggestions.map((suggestion) {
+                  return InkWell(
+                    onTap: () {
+                      setState(() {
+                        _ideaController.text = suggestion;
+                        _startingPosition = 'specific_idea';
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3ECE4),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        suggestion,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: darkBrown,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRadioCard({
+    required String keyName,
     required String title,
     required String subtitle,
     required IconData icon,
-    Widget? child,
+    required Color iconBg,
+    required Color iconColor,
+    required Color darkBrown,
+    required Color textMuted,
+    required Color borderColor,
   }) {
-    final isSelected = _startingPosition == positionKey;
+    final isSelected = _startingPosition == keyName;
 
-    return TactileCard(
-      onTap: () => setState(() => _startingPosition = positionKey),
-      border: Border.all(
-        color: isSelected ? AppColors.primary : AppColors.border,
-        width: isSelected ? 2.0 : 1.0,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isSelected ? AppColors.tertiary : AppColors.surfaceVariant,
-                ),
-                child: isSelected
-                    ? const Icon(Icons.check, size: 18, color: Colors.white)
-                    : null,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: AppTypography.labelLarge.copyWith(
-                        color: isSelected ? AppColors.primary : AppColors.textPrimary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      subtitle,
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+    return GestureDetector(
+      onTap: () => setState(() => _startingPosition = keyName),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? darkBrown : borderColor,
+            width: isSelected ? 1.5 : 1.0,
           ),
-          ?child,
-        ],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: iconBg,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 16, color: iconColor),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppTypography.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: darkBrown,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: AppTypography.bodySmall.copyWith(
+                      color: textMuted,
+                      fontSize: 12.5,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected ? darkBrown : const Color(0xFFD4CDC5),
+                  width: 2,
+                ),
+              ),
+              child: isSelected
+                  ? Center(
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: darkBrown,
+                        ),
+                      ),
+                    )
+                  : null,
+            ),
+          ],
+        ),
       ),
     );
   }
