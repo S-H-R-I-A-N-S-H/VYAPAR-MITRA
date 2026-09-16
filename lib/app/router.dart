@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'main_navigation_shell.dart';
+import '../features/auth/screens/auth_screen.dart';
 import '../features/business/screens/business_confirmation_screen.dart';
 import '../features/finance/screens/financial_scenario_screen.dart';
 import '../features/finance/screens/loan_repayment_screen.dart';
@@ -10,10 +12,13 @@ import '../features/profile/screens/business_profile_screen.dart';
 import '../features/recommendations/screens/action_plan_screen.dart';
 import '../features/research/screens/competitor_map_screen.dart';
 import '../features/research/screens/research_progress_screen.dart';
+import '../features/validation/screens/swot_analysis_screen.dart';
 import '../features/validation/screens/validation_dashboard_screen.dart';
 
 class AppRouter {
   static const String welcome = '/';
+  static const String home = '/home';
+  static const String auth = '/auth';
   static const String language = '/language';
   static const String profile = '/profile';
   static const String interview = '/interview';
@@ -22,6 +27,7 @@ class AppRouter {
   static const String researchProgress = '/research-progress';
   static const String competitorMap = '/competitor-map';
   static const String validationDashboard = '/validation-dashboard';
+  static const String swotAnalysis = '/swot-analysis';
   static const String financeModeler = '/finance-modeler';
   static const String loanPlanner = '/loan-planner';
   static const String actionPlan = '/action-plan';
@@ -30,6 +36,17 @@ class AppRouter {
     switch (settings.name) {
       case welcome:
         return MaterialPageRoute(builder: (_) => const WelcomeScreen());
+      case home:
+        final initialIndex = settings.arguments as int? ?? 0;
+        return MaterialPageRoute(
+          builder: (_) => MainNavigationShell(initialIndex: initialIndex),
+        );
+      case auth:
+        return MaterialPageRoute(
+          builder: (_) => AuthScreen(
+            redirectRoute: settings.arguments as String?,
+          ),
+        );
       case language:
         return MaterialPageRoute(builder: (_) => const LanguageSelectionScreen());
       case profile:
@@ -46,6 +63,8 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const CompetitorMapScreen());
       case validationDashboard:
         return MaterialPageRoute(builder: (_) => const ValidationDashboardScreen());
+      case swotAnalysis:
+        return MaterialPageRoute(builder: (_) => const SwotAnalysisScreen());
       case financeModeler:
         return MaterialPageRoute(builder: (_) => const FinancialScenarioScreen());
       case loanPlanner:

@@ -1,26 +1,23 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart';
 
 /// Centralized API endpoint URLs for the Vyapar Mitra FastAPI backend.
 class ApiEndpoints {
-  /// Base URL dynamically adapting to environment override, Android USB reverse / emulator, or desktop/web.
+  static String? _overrideBaseUrl;
+
+  /// Allows dynamically overriding the base URL (e.g. for testing or network discovery).
+  static void setBaseUrl(String url) {
+    _overrideBaseUrl = url;
+  }
+
+  /// Base URL dynamically adapting to environment override, Android USB reverse / loopback, or desktop/web.
   static String get baseUrl {
+    if (_overrideBaseUrl != null && _overrideBaseUrl!.isNotEmpty) {
+      return _overrideBaseUrl!;
+    }
     const customUrl = String.fromEnvironment('API_BASE_URL');
     if (customUrl.isNotEmpty) {
       return customUrl;
     }
-    if (kIsWeb) {
-      return 'http://127.0.0.1:8000/api/v1';
-    }
-    try {
-      if (Platform.isAndroid) {
-        // Works seamlessly with `adb reverse tcp:8000 tcp:8000` for physical devices
-        // and defaults to 10.0.2.2 for Android Studio emulators
-        return 'http://127.0.0.1:8000/api/v1';
-      }
-    } catch (_) {
-      // Fallback for non-mobile platforms
-    }
+    // With `adb reverse tcp:8000 tcp:8000`, 127.0.0.1:8000 connects directly to host on both physical devices and emulators.
     return 'http://127.0.0.1:8000/api/v1';
   }
 
@@ -58,6 +55,8 @@ class ApiEndpoints {
   static String researchEvidence(String id) => '$baseUrl/research/projects/$id/evidence';
   static String researchConflicts(String id) => '$baseUrl/research/projects/$id/conflicts';
   static String researchUncertainty(String id) => '$baseUrl/research/projects/$id/uncertainty';
+  static String researchSynthesizeSecondary(String id) => '$baseUrl/research/projects/$id/synthesize-secondary-research';
+
 
   // Field Surveys
   static String get surveys => '$baseUrl/surveys';

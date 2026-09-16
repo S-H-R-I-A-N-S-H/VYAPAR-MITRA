@@ -133,3 +133,52 @@ def test_research_lifecycle_and_survey_pipeline(auth_user):
     assert unc_report["has_primary_research"] is True
     assert unc_report["has_secondary_research"] is True
     assert unc_report["conflict_count"] >= 1
+
+
+def test_synthesize_secondary_research(auth_user):
+    # 1. Create a business (e.g. Bamboo Handicraft)
+    biz_res = client.post(
+        "/api/v1/businesses",
+        json={
+            "name": "Assam Eco Bamboo Crafts",
+            "domain": "Handicrafts",
+            "product_or_service": "Bamboo Baskets & Furniture",
+            "description": "Artisanal woven bamboo products for local retail and tourist haats."
+        }
+    )
+    biz_id = biz_res.json()["data"]["id"]
+
+    # 2. Create location
+    loc_res = client.post(
+        "/api/v1/locations",
+        json={
+            "state": "Assam",
+            "district": "Kamrup",
+            "town_or_village": "Hajo"
+        }
+    )
+    loc_id = loc_res.json()["data"]["id"]
+
+    # 3. Create research project
+    proj_res = client.post(
+        "/api/v1/research/projects",
+        json={
+            "business_id": biz_id,
+            "location_id": loc_id,
+            "research_scope": "local_10km"
+        }
+    )
+    proj_id = proj_res.json()["data"]["id"]
+
+    # 4. Synthesize live secondary research
+    synth_res = client.post(f"/api/v1/research/projects/{proj_id}/synthesize-secondary-research?radius_km=5.0")
+    assert synth_res.status_code in [200, 201]
+    data = synth_res.json()["data"]
+
+    assert data["project_id"] == proj_id
+    assert "Assam Eco Bamboo Crafts" in data["business_name"]
+    assert data["evidence_count"] >= 4
+    assert len(data["pipeline_steps"]) == 6
+    assert data["pipeline_steps"][0]["is_done"] is True
+    assert "Bamboo" in data["pipeline_steps"][0]["title"]
+

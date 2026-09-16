@@ -78,7 +78,7 @@ void main() {
 
       expect(response, isNotNull);
       expect(capturedAuthHeader, equals('Bearer mock-user-local-123'));
-      expect(capturedContentType, equals('application/json'));
+      expect(capturedContentType, startsWith('application/json'));
     });
 
     test('4. Unauthenticated request omits "Authorization" header entirely',

@@ -149,6 +149,62 @@ def verify_session_ownership(db: Any, session_id: str, current_user: Any, sessio
     return rec
 
 
+import uuid
+
+
+def is_valid_uuid(val: Any) -> bool:
+    """Returns True if val is a valid UUID string or UUID object."""
+    try:
+        uuid.UUID(str(val))
+        return True
+    except (ValueError, AttributeError, TypeError):
+        return False
+
+
+def to_deterministic_uuid(val: Any) -> str:
+    """Converts any string to a deterministic, valid UUID string."""
+    try:
+        return str(uuid.UUID(str(val)))
+    except (ValueError, AttributeError, TypeError):
+        return str(uuid.uuid5(uuid.NAMESPACE_DNS, str(val)))
+
+
+def verify_session_ownership(db: Any, session_id: str, current_user: Any, session_record: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    Verifies that the session exists and belongs to the authenticated user.
+    Raises ResourceNotFoundException if missing.
+    Raises ForbiddenOperationException if owned by another user.
+    """
+    from app.core.errors import ForbiddenOperationException, ResourceNotFoundException
+    from app.api.v1.endpoints.interview import _OFFLINE_SESSIONS
+
+    user_id = extract_user_id(current_user)
+    rec = session_record
+
+    if rec is None and db is not None:
+        if is_valid_uuid(session_id):
+            try:
+                res = db.table("interview_sessions").select("*").eq("id", session_id).execute()
+                if res.data:
+                    rec = res.data[0]
+            except Exception as e:
+                logger.warning(f"Database error during session lookup: {e}")
+
+    if rec is None and session_id in _OFFLINE_SESSIONS:
+        rec = _OFFLINE_SESSIONS[session_id]
+
+    if rec is None:
+        raise ResourceNotFoundException("InterviewSession", session_id)
+
+    allowed_ids = get_user_entrepreneur_ids(db, user_id)
+    if not allowed_ids:
+        allowed_ids.add(to_deterministic_uuid(user_id))
+    if str(rec.get("entrepreneur_id")) not in allowed_ids:
+        raise ForbiddenOperationException("You do not have permission to access this interview session.")
+
+    return rec
+
+
 def verify_business_ownership(db: Any, business_id: str, current_user: Any, business_record: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Verifies that the business exists and belongs to the authenticated user.
@@ -162,12 +218,13 @@ def verify_business_ownership(db: Any, business_id: str, current_user: Any, busi
     rec = business_record
 
     if rec is None and db is not None:
-        try:
-            res = db.table("businesses").select("*").eq("id", business_id).execute()
-            if res.data:
-                rec = res.data[0]
-        except Exception as e:
-            logger.warning(f"Database error during business lookup: {e}")
+        if is_valid_uuid(business_id):
+            try:
+                res = db.table("businesses").select("*").eq("id", business_id).execute()
+                if res.data:
+                    rec = res.data[0]
+            except Exception as e:
+                logger.warning(f"Database error during business lookup: {e}")
 
     if rec is None and business_id in _OFFLINE_BUSINESSES:
         rec = _OFFLINE_BUSINESSES[business_id]
@@ -176,6 +233,8 @@ def verify_business_ownership(db: Any, business_id: str, current_user: Any, busi
         raise ResourceNotFoundException("Business", business_id)
 
     allowed_ids = get_user_entrepreneur_ids(db, user_id)
+    if not allowed_ids:
+        allowed_ids.add(to_deterministic_uuid(user_id))
     if str(rec.get("entrepreneur_id")) not in allowed_ids:
         raise ForbiddenOperationException("You do not have permission to access this business.")
 
@@ -193,12 +252,13 @@ def verify_research_project_ownership(db: Any, project_id: str, current_user: An
 
     rec = project_record
     if rec is None and db is not None:
-        try:
-            res = db.table("research_projects").select("*").eq("id", project_id).execute()
-            if res.data:
-                rec = res.data[0]
-        except Exception as e:
-            logger.warning(f"Database error during research project lookup: {e}")
+        if is_valid_uuid(project_id):
+            try:
+                res = db.table("research_projects").select("*").eq("id", project_id).execute()
+                if res.data:
+                    rec = res.data[0]
+            except Exception as e:
+                logger.warning(f"Database error during research project lookup: {e}")
 
     if rec is None and project_id in _OFFLINE_PROJECTS:
         rec = _OFFLINE_PROJECTS[project_id]
@@ -221,12 +281,13 @@ def verify_financial_scenario_ownership(db: Any, scenario_id: str, current_user:
 
     rec = scenario_record
     if rec is None and db is not None:
-        try:
-            res = db.table("financial_scenarios").select("*").eq("id", scenario_id).execute()
-            if res.data:
-                rec = res.data[0]
-        except Exception as e:
-            logger.warning(f"Database error during financial scenario lookup: {e}")
+        if is_valid_uuid(scenario_id):
+            try:
+                res = db.table("financial_scenarios").select("*").eq("id", scenario_id).execute()
+                if res.data:
+                    rec = res.data[0]
+            except Exception as e:
+                logger.warning(f"Database error during financial scenario lookup: {e}")
 
     if rec is None and scenario_id in _OFFLINE_SCENARIOS:
         rec = _OFFLINE_SCENARIOS[scenario_id]
@@ -249,12 +310,13 @@ def verify_survey_ownership(db: Any, survey_id: str, current_user: Any, survey_r
 
     rec = survey_record
     if rec is None and db is not None:
-        try:
-            res = db.table("surveys").select("*").eq("id", survey_id).execute()
-            if res.data:
-                rec = res.data[0]
-        except Exception as e:
-            logger.warning(f"Database error during survey lookup: {e}")
+        if is_valid_uuid(survey_id):
+            try:
+                res = db.table("surveys").select("*").eq("id", survey_id).execute()
+                if res.data:
+                    rec = res.data[0]
+            except Exception as e:
+                logger.warning(f"Database error during survey lookup: {e}")
 
     if rec is None and survey_id in _OFFLINE_SURVEYS:
         rec = _OFFLINE_SURVEYS[survey_id]

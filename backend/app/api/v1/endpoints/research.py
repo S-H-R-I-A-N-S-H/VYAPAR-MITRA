@@ -16,6 +16,7 @@ from app.core.security import AuthenticatedUser, get_current_user
 from app.utils import (
     extract_user_id,
     get_user_entrepreneur_ids,
+    is_valid_uuid,
     require_db,
     should_use_offline_fallback,
     verify_business_ownership,
@@ -31,6 +32,7 @@ from app.schemas.research import (
 )
 from app.services.conflict_detector import ConflictDetector, UncertaintyReport
 from app.services.prompt_service import PromptService
+from app.services.smart_research_service import SmartResearchService
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +40,7 @@ router = APIRouter()
 conflict_detector = ConflictDetector()
 prompt_service = PromptService()
 mappls_adapter = MapplsAdapter()
+smart_research_service = SmartResearchService()
 
 # In-memory stores for sandbox/test mode
 _OFFLINE_PROJECTS: Dict[str, Dict[str, Any]] = {}
@@ -429,7 +432,7 @@ async def discover_project_competitors(
     lon = 73.8567
     cat = category or "General Enterprise"
 
-    if db is not None:
+    if db is not None and is_valid_uuid(project_id):
         try:
             proj_res = db.table("research_projects").select("*, locations(*), businesses(*)").eq("id", project_id).execute()
             if proj_res.data:
@@ -505,4 +508,110 @@ async def discover_project_competitors(
         },
         message=f"Discovered {len(competitors)} local competitors and logged to research evidence.",
     )
+
+
+@router.post(
+    "/research/projects/{project_id}/synthesize-secondary-research",
+    summary="Synthesize live multi-pillar secondary research using Google Search Grounding and Mappls POI",
+)
+async def synthesize_project_secondary_research(
+    project_id: str,
+    radius_km: float = 5.0,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    proj_res = await get_research_project(project_id, current_user)
+    db = _get_db()
+
+    biz_name = "Enterprise"
+    biz_domain = "General"
+    locality = "Local Area"
+    district = "District"
+    state = "State"
+    lat = 22.9772
+    lon = 75.8078
+
+    if db is not None and is_valid_uuid(project_id):
+        try:
+            p_data = db.table("research_projects").select("*, locations(*), businesses(*)").eq("id", project_id).execute()
+            if p_data.data:
+                p = p_data.data[0]
+                loc = p.get("locations") or {}
+                biz = p.get("businesses") or {}
+                biz_name = biz.get("name") or biz.get("product_or_service") or biz_name
+                biz_domain = biz.get("domain") or biz_domain
+                locality = loc.get("town_or_village") or locality
+                district = loc.get("district") or district
+                state = loc.get("state") or state
+                if loc.get("latitude") and loc.get("longitude"):
+                    lat = float(loc["latitude"])
+                    lon = float(loc["longitude"])
+        except Exception as e:
+            logger.warning(f"Failed to load project details for research synthesis: {e}")
+
+    if biz_name == "Enterprise":
+        for b_id, b_rec in _OFFLINE_PROJECTS.items():
+            if b_id == project_id:
+                biz_id = b_rec.get("business_id")
+                from app.api.v1.endpoints.businesses import _OFFLINE_BUSINESSES
+                biz_obj = _OFFLINE_BUSINESSES.get(biz_id, {})
+                biz_name = biz_obj.get("name", "Enterprise")
+                biz_domain = biz_obj.get("domain", "General")
+
+    research_result = await smart_research_service.execute_smart_research(
+        project_id=project_id,
+        business_name=biz_name,
+        domain=biz_domain,
+        locality=locality,
+        district=district,
+        state=state,
+        latitude=lat,
+        longitude=lon,
+        radius_km=radius_km,
+    )
+
+    ev_items = research_result["evidence_items"]
+    if db is not None:
+        try:
+            for ev in ev_items:
+                db.table("evidence").insert({
+                    "id": ev.id,
+                    "research_project_id": project_id,
+                    "claim": ev.claim,
+                    "extracted_value": ev.extracted_value,
+                    "unit": ev.unit,
+                    "source_name": ev.source_name,
+                    "source_url": ev.source_url,
+                    "source_type": ev.source_type,
+                    "geography": ev.geography,
+                    "confidence_score": ev.confidence_score,
+                    "created_at": ev.created_at.isoformat(),
+                }).execute()
+        except Exception as e:
+            logger.warning(f"Error persisting synthesized evidence in db: {e}")
+
+    if project_id not in _OFFLINE_EVIDENCE:
+        _OFFLINE_EVIDENCE[project_id] = []
+    for ev in ev_items:
+        _OFFLINE_EVIDENCE[project_id].append(ev.model_dump())
+
+    return APIResponse(
+        success=True,
+        data={
+            "project_id": project_id,
+            "business_name": biz_name,
+            "domain": biz_domain,
+            "locality": locality,
+            "district": district,
+            "state": state,
+            "competitor_count": research_result["competitor_count"],
+            "competitors": research_result["competitors"],
+            "evidence_count": len(ev_items),
+            "evidence_items": [ev.model_dump() for ev in ev_items],
+            "pipeline_steps": research_result["pipeline_steps"],
+            "grounded_sources": research_result["grounded_sources"],
+            "search_grounded": research_result["search_grounded"],
+        },
+        message=f"Synthesized live secondary research for {biz_name} in {district}.",
+    )
+
 

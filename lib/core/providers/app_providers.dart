@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../auth/auth_notifier.dart';
 import '../auth/auth_state.dart';
+import '../models/business_lifecycle.dart';
 import '../network/api_client.dart';
 
 /// Provider for authentication session and token management.
@@ -85,7 +86,8 @@ class BusinessProfileState {
 }
 
 class BusinessProfileNotifier extends StateNotifier<BusinessProfileState> {
-  BusinessProfileNotifier() : super(const BusinessProfileState());
+  BusinessProfileNotifier([BusinessProfileState? initial])
+      : super(initial ?? const BusinessProfileState());
 
   void updateProfile(BusinessProfileState updated) {
     state = updated;
@@ -163,7 +165,8 @@ class SelectedBusinessState {
 }
 
 class SelectedBusinessNotifier extends StateNotifier<SelectedBusinessState> {
-  SelectedBusinessNotifier() : super(const SelectedBusinessState());
+  SelectedBusinessNotifier([SelectedBusinessState? initial])
+      : super(initial ?? const SelectedBusinessState());
 
   void selectBusiness(SelectedBusinessState business) {
     state = business;
@@ -181,4 +184,30 @@ class SelectedBusinessNotifier extends StateNotifier<SelectedBusinessState> {
 final selectedBusinessProvider =
     StateNotifierProvider<SelectedBusinessNotifier, SelectedBusinessState>((ref) {
   return SelectedBusinessNotifier();
+});
+
+/// StateNotifier to manage active Business Lifecycle Stage.
+/// Powers the stage-aware dynamic Home screen and next-best-action guidance.
+class BusinessLifecycleNotifier extends StateNotifier<BusinessLifecycleStage> {
+  BusinessLifecycleNotifier([super.initial = BusinessLifecycleStage.discover]);
+
+  void setStage(BusinessLifecycleStage stage) {
+    state = stage;
+  }
+
+  void advanceStage() {
+    final nextIndex = state.index + 1;
+    if (nextIndex < BusinessLifecycleStage.values.length) {
+      state = BusinessLifecycleStage.values[nextIndex];
+    }
+  }
+
+  void reset() {
+    state = BusinessLifecycleStage.discover;
+  }
+}
+
+final businessLifecycleProvider =
+    StateNotifierProvider<BusinessLifecycleNotifier, BusinessLifecycleStage>((ref) {
+  return BusinessLifecycleNotifier();
 });

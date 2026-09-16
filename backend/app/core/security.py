@@ -37,24 +37,27 @@ async def get_current_user(
     Validates the Supabase JWT access token and returns an AuthenticatedUser model.
     Enforces expiration check, signature integrity, and dev-mock scoping.
     """
-    if not authorization:
-        if settings.ENVIRONMENT == "development" and getattr(settings, "DEV_ALLOW_ANONYMOUS", False):
+    # In development mode with DEV_ALLOW_ANONYMOUS=True, allow unauthenticated access for local/mobile prototyping
+    if settings.ENVIRONMENT == "development" and getattr(settings, "DEV_ALLOW_ANONYMOUS", False):
+        if not authorization or not authorization.strip():
             return AuthenticatedUser(
-                user_id="dev-user-default",
-                email="dev-user-default@vyaparmitra.dev",
+                user_id="dev-001",
+                email="dev-001@vyaparmitra.dev",
                 role="authenticated",
-                claims={"sub": "dev-user-default", "mock": True},
+                claims={"sub": "dev-001", "dev_anonymous": True},
             )
+
+    if not authorization:
         raise UnauthorizedAccessException("Missing Authorization header.")
 
     scheme, _, token = authorization.partition(" ")
     if scheme.lower() != "bearer" or not token:
         if settings.ENVIRONMENT == "development" and getattr(settings, "DEV_ALLOW_ANONYMOUS", False):
             return AuthenticatedUser(
-                user_id="dev-user-default",
-                email="dev-user-default@vyaparmitra.dev",
+                user_id="dev-001",
+                email="dev-001@vyaparmitra.dev",
                 role="authenticated",
-                claims={"sub": "dev-user-default", "mock": True},
+                claims={"sub": "dev-001", "dev_anonymous": True},
             )
         raise UnauthorizedAccessException("Authorization header must follow 'Bearer <token>' format.")
 
@@ -87,6 +90,13 @@ async def get_current_user(
 
         user_id: Optional[str] = payload.get("sub")
         if not user_id:
+            if settings.ENVIRONMENT == "development" and getattr(settings, "DEV_ALLOW_ANONYMOUS", False):
+                return AuthenticatedUser(
+                    user_id="dev-001",
+                    email="dev-001@vyaparmitra.dev",
+                    role="authenticated",
+                    claims={"sub": "dev-001", "dev_anonymous": True},
+                )
             raise UnauthorizedAccessException("Token payload does not contain a valid user identifier ('sub').")
 
         return AuthenticatedUser(
@@ -96,8 +106,22 @@ async def get_current_user(
             claims=payload,
         )
     except ExpiredSignatureError:
+        if settings.ENVIRONMENT == "development" and getattr(settings, "DEV_ALLOW_ANONYMOUS", False):
+            return AuthenticatedUser(
+                user_id="dev-001",
+                email="dev-001@vyaparmitra.dev",
+                role="authenticated",
+                claims={"sub": "dev-001", "dev_anonymous": True},
+            )
         raise UnauthorizedAccessException("Token has expired. Please re-authenticate.")
     except JWTError as e:
+        if settings.ENVIRONMENT == "development" and getattr(settings, "DEV_ALLOW_ANONYMOUS", False):
+            return AuthenticatedUser(
+                user_id="dev-001",
+                email="dev-001@vyaparmitra.dev",
+                role="authenticated",
+                claims={"sub": "dev-001", "dev_anonymous": True},
+            )
         raise UnauthorizedAccessException(f"Token validation failed: {str(e)}")
 
 

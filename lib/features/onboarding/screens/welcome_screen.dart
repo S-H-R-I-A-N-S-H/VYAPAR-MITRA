@@ -4,7 +4,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../shared/widgets/floating_voice_bar.dart';
+import '../../../shared/widgets/voice_mic_button.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/tactile_card.dart';
 
@@ -69,46 +69,159 @@ class WelcomeScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  // Interactive Language Pill
-                  InkWell(
-                    onTap: () => Navigator.pushNamed(context, '/language'),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
+                  Row(
+                    children: [
+                      // Interactive Language Pill
+                      InkWell(
+                        onTap: () => Navigator.pushNamed(context, '/language'),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.border),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.04),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.border),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withValues(alpha: 0.04),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                        ],
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.secondary,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                isHindi ? 'हिन्दी' : 'EN',
+                                style: AppTypography.labelSmall.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: const BoxDecoration(
-                              color: AppColors.secondary,
-                              shape: BoxShape.circle,
+                      const SizedBox(width: 8),
+                      // Auth Account Pill
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final auth = ref.watch(authProvider);
+                          final isAuth = auth.isAuthenticated;
+                          return InkWell(
+                            onTap: () {
+                              if (isAuth) {
+                                showModalBottomSheet(
+                                  context: context,
+                                  backgroundColor: AppColors.surface,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                  ),
+                                  builder: (ctx) => SafeArea(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(20.0),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            isHindi ? 'सक्रिय खाता विवरण' : 'Active Account Details',
+                                            style: AppTypography.headlineSmall.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.primary,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Container(
+                                            padding: const EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.surfaceVariant,
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                const Icon(Icons.account_circle, color: AppColors.primary, size: 28),
+                                                const SizedBox(width: 10),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        auth.phone ?? auth.email ?? auth.userId ?? 'User',
+                                                        style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                                                      ),
+                                                      Text(
+                                                        'ID: ${auth.userId ?? "dev"}',
+                                                        style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          PrimaryButton(
+                                            label: isHindi ? 'लॉगआउट करें (Sign Out)' : 'Sign Out',
+                                            onPressed: () {
+                                              ref.read(authProvider.notifier).signOut();
+                                              Navigator.pop(ctx);
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                Navigator.pushNamed(context, '/auth');
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: isAuth ? AppColors.surfaceVariant : AppColors.secondary.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: isAuth ? AppColors.border : AppColors.secondary.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isAuth ? Icons.check_circle_rounded : Icons.login_rounded,
+                                    size: 14,
+                                    color: isAuth ? AppColors.tertiary : AppColors.secondary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    isAuth
+                                        ? (isHindi ? 'खाता' : 'Account')
+                                        : (isHindi ? 'लॉगिन' : 'Login'),
+                                    style: AppTypography.labelSmall.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: isAuth ? AppColors.primary : AppColors.secondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            isHindi ? 'हिन्दी' : 'EN',
-                            style: AppTypography.labelSmall.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ],
+                          );
+                        },
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),
@@ -328,15 +441,16 @@ class WelcomeScreen extends ConsumerWidget {
                 ),
               ),
             ),
-
-            // Sticky Bottom Voice Bar
-            FloatingVoiceBar(
-              onMicTap: () {
-                Navigator.pushNamed(context, '/interview');
-              },
-            ),
           ],
         ),
+      ),
+      floatingActionButton: VoiceMicButton(
+        size: 52,
+        hasElevation: true,
+        tooltip: isHindi ? 'बोलकर पूछें • Voice Assistant' : 'Ask AI with Voice',
+        onTap: () {
+          Navigator.pushNamed(context, '/conversational-interview');
+        },
       ),
     );
   }

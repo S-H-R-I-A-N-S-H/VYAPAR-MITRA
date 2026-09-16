@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/audio/voice_service.dart';
+import '../../../core/models/business_lifecycle.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/tactile_card.dart';
+import '../../../shared/widgets/voice_aware_text_field.dart';
 import '../../../shared/widgets/vyapar_top_app_bar.dart';
 
 /// Screen 3: Mobile Business Situation & Profile Setup
@@ -48,15 +51,23 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _ideaController = TextEditingController();
+    _nameController = TextEditingController();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _hydrateFromProvider());
+  }
+
+  void _hydrateFromProvider() {
+    if (!mounted) return;
     final profile = ref.read(businessProfileProvider);
-    _startingPosition = profile.startingPosition;
-    _ideaController = TextEditingController(text: profile.businessIdea);
-    _nameController = TextEditingController(text: profile.fullName ?? 'Ramesh Kumar');
-    _capital = profile.personalCapital;
-    // Fall back to default only if provider has no value yet
-    _district = profile.district.isNotEmpty ? profile.district : 'Indore';
-    _block = profile.block.isNotEmpty ? profile.block : 'Sanwer';
-    _socialCategory = profile.socialCategory;
+    setState(() {
+      _startingPosition = profile.startingPosition;
+      _ideaController.text = profile.businessIdea;
+      _nameController.text = profile.fullName ?? 'Ramesh Kumar';
+      _capital = profile.personalCapital;
+      _district = profile.district.isNotEmpty ? profile.district : 'Indore';
+      _block = profile.block.isNotEmpty ? profile.block : 'Sanwer';
+      _socialCategory = profile.socialCategory;
+    });
   }
 
   @override
@@ -220,6 +231,9 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
     // Save profile to backend via ApiClient matching EntrepreneurProfileCreate contract
     try {
       final apiClient = ref.read(apiClientProvider);
+      if (apiClient.authToken == null || apiClient.authToken!.trim().isEmpty) {
+        apiClient.setAuthToken('mock-user-dev-001');
+      }
       final payload = {
         'full_name': _nameController.text.trim(),
         'preferred_language': ref.read(localeProvider).languageCode,
@@ -248,9 +262,12 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
         ref.read(businessProfileProvider.notifier).setProfileId(profileId);
       }
 
+      // Initialize lifecycle stage to discover for stage-aware Home guidance
+      ref.read(businessLifecycleProvider.notifier).setStage(BusinessLifecycleStage.discover);
+
       if (mounted) {
         setState(() => _isLoading = false);
-        Navigator.pushNamed(context, '/interview');
+        Navigator.pushReplacementNamed(context, '/home');
       }
     } catch (e) {
       debugPrint('Profile creation failed: $e');
@@ -276,6 +293,14 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
         title: 'VYAPAR MITRA',
         stepText: isHindi ? 'चरण 2 / 4' : 'Step 2 of 4',
         progress: 0.5,
+        showAudioButton: true,
+        onAudioTap: () {
+          final voiceService = ref.read(voiceServiceProvider);
+          final readout = isHindi
+              ? 'कृपया अपने व्यवसाय का विचार और उपलब्ध पूंजी चुनें। आप माइक दबाकर बोल भी सकते हैं।'
+              : 'Please choose your business starting point and capital. You can also tap the mic to speak.';
+          voiceService.speakText(readout, languageCode: isHindi ? 'hi' : 'en');
+        },
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -343,15 +368,12 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
                 child: _startingPosition == 'specific_idea'
                     ? Padding(
                         padding: const EdgeInsets.only(top: 10.0),
-                        child: TextField(
+                        child: VoiceAwareTextField(
                           controller: _ideaController,
-                          decoration: InputDecoration(
-                            hintText: isHindi ? 'व्यवसाय का नाम लिखें' : 'Enter your business idea',
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.mic_rounded, color: AppColors.secondary),
-                              onPressed: () {},
-                            ),
-                          ),
+                          hintText: isHindi
+                              ? 'व्यवसाय का नाम लिखें या बोलें...'
+                              : 'Enter or speak your business idea...',
+                          languageCode: isHindi ? 'hi' : 'en',
                         ),
                       )
                     : null,

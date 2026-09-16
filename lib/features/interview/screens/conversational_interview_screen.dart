@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -42,13 +43,15 @@ class ConversationalInterviewScreen extends ConsumerStatefulWidget {
 }
 
 class _ConversationalInterviewScreenState
-    extends ConsumerState<ConversationalInterviewScreen> {
+    extends ConsumerState<ConversationalInterviewScreen>
+    with SingleTickerProviderStateMixin {
   final List<ChatMessage> _messages = [];
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   ApiClient get _apiClient => ref.read(apiClientProvider);
 
   late VoiceService _voiceService;
+  late AnimationController _waveformController;
   String? _sessionId;
   bool _isAiResponding = false;
   int _turnCount = 0;
@@ -65,8 +68,15 @@ class _ConversationalInterviewScreenState
   @override
   void initState() {
     super.initState();
-    _initializeChat();
-    _initSessionWithBackend();
+    _waveformController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _initializeChat();
+      _initSessionWithBackend();
+    });
   }
 
   @override
@@ -79,6 +89,14 @@ class _ConversationalInterviewScreenState
           setState(() {
             _voiceState = _voiceService.currentState;
           });
+          if (_voiceService.currentState == VoiceState.recording) {
+            if (!_waveformController.isAnimating) _waveformController.repeat();
+          } else {
+            if (_waveformController.isAnimating) {
+              _waveformController.stop();
+              _waveformController.reset();
+            }
+          }
         }
       };
       _voiceService.stateNotifier.addListener(_voiceStateListener!);
@@ -124,34 +142,48 @@ class _ConversationalInterviewScreenState
       _voiceService.stateNotifier.removeListener(_voiceStateListener!);
       _voiceService.stopAudio();
     }
+    _waveformController.dispose();
     _inputController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
   Future<void> _handleMicTap() async {
-    if (_voiceService.isRecording) {
-      // Stop recording and process
+    if (_voiceState == VoiceState.recording) {
+      // User tapped to stop recording
       setState(() => _voiceState = VoiceState.processing);
-      final audioB64 = await _voiceService.stopRecordingAndGetBase64();
+      _waveformController.stop();
+      _waveformController.reset();
 
-      if (audioB64 != null && audioB64.isNotEmpty) {
-        await _processVoiceTurn(audioB64);
-      } else {
+      await _voiceService.stopListening();
+      final words = _voiceService.liveWords.trim();
+
+      if (words.isNotEmpty) {
+        _inputController.text = words;
         setState(() => _voiceState = VoiceState.idle);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('कोई आवाज़ रिकॉर्ड नहीं हुई। • No audio recorded.'),
-              duration: Duration(seconds: 2),
-            ),
-          );
+        await _sendMessage(words);
+      } else {
+        // Fallback: check if WAV audio recording was captured
+        final audioB64 = await _voiceService.stopRecordingAndGetBase64();
+        if (audioB64 != null && audioB64.isNotEmpty) {
+          await _processVoiceTurn(audioB64);
+        } else {
+          setState(() => _voiceState = VoiceState.idle);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('कोई आवाज़ रिकॉर्ड नहीं हुई। • No audio recorded.'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
         }
       }
     } else if (_voiceService.isPlaying) {
       await _voiceService.stopAudio();
       setState(() => _voiceState = VoiceState.idle);
     } else {
+      FocusScope.of(context).unfocus();
       final hasPerm = await _voiceService.hasPermission();
       if (!hasPerm) {
         if (mounted) {
@@ -166,11 +198,31 @@ class _ConversationalInterviewScreenState
       }
 
       try {
-        await _voiceService.startRecording();
+        final lang = ref.read(localeProvider).languageCode;
         setState(() => _voiceState = VoiceState.recording);
+        _waveformController.repeat();
+
+        await _voiceService.startListening(
+          languageCode: lang,
+          onResult: (words, isFinal) {
+            if (isFinal && words.trim().isNotEmpty && mounted) {
+              _waveformController.stop();
+              _waveformController.reset();
+              _inputController.text = words;
+              setState(() => _voiceState = VoiceState.idle);
+              _sendMessage(words);
+            }
+          },
+        );
       } catch (e) {
-        debugPrint('Failed to start recording: $e');
-        setState(() => _voiceState = VoiceState.idle);
+        debugPrint('STT start failed, falling back to raw recording: $e');
+        try {
+          await _voiceService.startRecording();
+          setState(() => _voiceState = VoiceState.recording);
+          _waveformController.repeat();
+        } catch (_) {
+          setState(() => _voiceState = VoiceState.idle);
+        }
       }
     }
   }
@@ -407,11 +459,26 @@ class _ConversationalInterviewScreenState
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: VyaparTopAppBar(
-        title: 'Business Advisor AI',
+        title: isHindi ? 'बिजनेस एडवाइजर एआई' : 'Business Advisor AI',
         subtitle: 'VYAPAR MITRA',
         stepText: isHindi ? 'चरण 2 / 4' : 'Step 2 of 4',
         progress: 0.6,
         showAudioButton: true,
+        onAudioTap: () {
+          final lastAiMsg = _messages.reversed.firstWhere(
+            (m) => !m.isUser,
+            orElse: () => ChatMessage(
+              text: isHindi ? 'व्यापार मित्र सलाहकार' : 'Vyapar Mitra Advisor',
+              isUser: false,
+              time: '',
+            ),
+          );
+          if (lastAiMsg.audioBase64 != null && lastAiMsg.audioBase64!.isNotEmpty) {
+            _voiceService.playAudioFromBase64(lastAiMsg.audioBase64!);
+          } else {
+            _voiceService.speakText(lastAiMsg.text, languageCode: isHindi ? 'hi' : 'en');
+          }
+        },
       ),
       body: SafeArea(
         child: Column(
@@ -511,44 +578,104 @@ class _ConversationalInterviewScreenState
               ),
             ),
 
-            // Text input bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: TextField(
-                        controller: _inputController,
-                        decoration: InputDecoration(
-                          hintText: isHindi
-                              ? 'संदेश लिखें या नीचे माइक दबाएं...'
-                              : 'Type message or tap mic below...',
-                          hintStyle: AppTypography.bodySmall.copyWith(
-                            color: AppColors.textMuted,
-                          ),
-                          border: InputBorder.none,
+            // Text input bar with voice waveform animation replacement
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 250),
+              crossFadeState: _voiceState == VoiceState.recording
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              firstChild: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: AppColors.border),
                         ),
-                        onSubmitted: _sendMessage,
+                        child: TextField(
+                          controller: _inputController,
+                          decoration: InputDecoration(
+                            hintText: isHindi
+                                ? 'संदेश लिखें या माइक दबाएं...'
+                                : 'Type message or tap mic...',
+                            hintStyle: AppTypography.bodySmall.copyWith(
+                              color: AppColors.textMuted,
+                            ),
+                            border: InputBorder.none,
+                          ),
+                          onSubmitted: _sendMessage,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    onPressed: () => _sendMessage(_inputController.text),
-                    icon: const Icon(Icons.send_rounded, size: 20),
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
+                    const SizedBox(width: 8),
+                    IconButton.filled(
+                      onPressed: () => _sendMessage(_inputController.text),
+                      icon: const Icon(Icons.send_rounded, size: 20),
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                      ),
                     ),
+                  ],
+                ),
+              ),
+              secondChild: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                child: Container(
+                  height: 52,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF5F5),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: const Color(0xFFFFCDD2), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFD32F2F).withValues(alpha: 0.12),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                ],
+                  child: Row(
+                    children: [
+                      _buildWaveformBars(),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ValueListenableBuilder<String>(
+                          valueListenable: _voiceService.liveWordsNotifier,
+                          builder: (context, liveWords, _) {
+                            final hasWords = liveWords.trim().isNotEmpty;
+                            return Text(
+                              hasWords
+                                  ? liveWords
+                                  : (isHindi ? 'बोलिए, सुन रहे हैं...' : 'Listening... Speak now'),
+                              style: AppTypography.bodyMedium.copyWith(
+                                color: hasWords ? AppColors.textPrimary : const Color(0xFFD32F2F),
+                                fontWeight: hasWords ? FontWeight.w500 : FontWeight.bold,
+                                fontStyle: hasWords ? FontStyle.normal : FontStyle.italic,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton.filled(
+                        onPressed: _handleMicTap,
+                        icon: const Icon(Icons.stop_rounded, size: 20),
+                        style: IconButton.styleFrom(
+                          backgroundColor: const Color(0xFFD32F2F),
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
 
@@ -575,6 +702,33 @@ class _ConversationalInterviewScreenState
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildWaveformBars() {
+    return AnimatedBuilder(
+      animation: _waveformController,
+      builder: (context, _) {
+        final t = _waveformController.value * 2 * math.pi;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(5, (index) {
+            final phase = index * (math.pi / 3);
+            final heightFactor = (math.sin(t + phase).abs() * 0.7) + 0.3;
+            const maxHeight = 24.0;
+
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 2.0),
+              width: 3.5,
+              height: maxHeight * heightFactor,
+              decoration: BoxDecoration(
+                color: const Color(0xFFD32F2F).withValues(alpha: 0.7 + (heightFactor * 0.3)),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 

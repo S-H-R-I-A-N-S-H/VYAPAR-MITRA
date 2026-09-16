@@ -12,6 +12,7 @@ class AuthState {
   final String? token;
   final String? userId;
   final String? email;
+  final String? phone;
   final String? errorMessage;
 
   const AuthState({
@@ -19,6 +20,7 @@ class AuthState {
     this.token,
     this.userId,
     this.email,
+    this.phone,
     this.errorMessage,
   });
 
@@ -35,12 +37,14 @@ class AuthState {
     required String token,
     required String userId,
     String? email,
+    String? phone,
   }) =>
       AuthState(
         status: AuthStatus.authenticated,
         token: token,
         userId: userId,
         email: email,
+        phone: phone,
       );
 
   factory AuthState.unauthenticated() =>
@@ -56,6 +60,7 @@ class AuthState {
     String? token,
     String? userId,
     String? email,
+    String? phone,
     String? errorMessage,
   }) {
     return AuthState(
@@ -63,6 +68,7 @@ class AuthState {
       token: token ?? this.token,
       userId: userId ?? this.userId,
       email: email ?? this.email,
+      phone: phone ?? this.phone,
       errorMessage: errorMessage ?? this.errorMessage,
     );
   }

@@ -22,7 +22,8 @@ class Settings(BaseSettings):
 
     # Gemini AI
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.0-flash"
+    GEMINI_MODEL: str = "gemini-3.5-flash-lite"
+    GEMINI_FALLBACK_MODELS: str = "gemini-flash-latest,gemini-3.1-flash-lite,gemini-3.6-flash"
 
     # BHASHINI (Speech / Indian Language Layer)
     BHASHINI_API_KEY: Optional[str] = None

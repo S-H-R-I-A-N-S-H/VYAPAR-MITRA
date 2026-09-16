@@ -20,7 +20,7 @@ from app.core.errors import VyaparMitraException
 from app.schemas.common import APIResponse
 
 # ---------------------------------------------------------------------------
-# Structured Logging Configuration
+# Structured Logging Configuration (Vyapar Mitra Backend)
 # ---------------------------------------------------------------------------
 
 LOGGING_CONFIG = {

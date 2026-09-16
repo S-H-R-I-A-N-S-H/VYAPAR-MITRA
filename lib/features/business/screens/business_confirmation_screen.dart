@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/audio/voice_service.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_colors.dart';
@@ -115,6 +116,13 @@ class _BusinessConfirmationScreenState
         title: 'VYAPAR MITRA',
         stepText: isHindi ? 'पुष्टि चरण • 100% तैयार' : 'Checkpoint • Ready',
         showAudioButton: true,
+        onAudioTap: () {
+          final voiceService = ref.read(voiceServiceProvider);
+          final readout = isHindi
+              ? 'व्यवसाय योजना की पुष्टि: ${business.title} के लिए सभी विवरण तैयार हैं।'
+              : 'Business confirmation: All details for ${business.title} are ready to proceed.';
+          voiceService.speakText(readout, languageCode: isHindi ? 'hi' : 'en');
+        },
       ),
       body: SafeArea(
         child: SingleChildScrollView(

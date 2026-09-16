@@ -122,7 +122,23 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
 
       // ==========================================
-      // --- 4. Conversational Interview Screen ---
+      // --- 4. Main App Home Dashboard with Persistent Navigation ---
+      // ==========================================
+      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.text('Home'), findsWidgets);
+      expect(find.text('Analyzer'), findsOneWidget);
+      expect(find.text('Finance'), findsWidgets);
+      expect(find.text('Learn'), findsWidgets);
+      expect(find.text('AI Interview & Opportunity Discovery'), findsOneWidget);
+      expect(find.text('Continue Discovery →'), findsOneWidget);
+
+      await tester.ensureVisible(find.text('Continue Discovery →'));
+      await tester.tap(find.text('Continue Discovery →'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // ==========================================
+      // --- 5. Conversational Interview Screen ---
       // ==========================================
       expect(find.text('Business Advisor AI'), findsOneWidget);
       expect(find.text('Direct farm access'), findsOneWidget);

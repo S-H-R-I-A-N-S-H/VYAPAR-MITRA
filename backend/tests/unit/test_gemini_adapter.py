@@ -140,3 +140,102 @@ async def test_gemini_adapter_persistent_failure_raises_ai_provider_exception(mo
                     max_retries=2
                 )
         assert "AI_PROVIDER_ERROR" == exc_info.value.error_code
+
+
+@pytest.mark.asyncio
+async def test_gemini_adapter_cascades_on_429_quota_exhausted(mock_settings):
+    mock_settings.GEMINI_MODEL = "gemini-3.5-flash-lite"
+    mock_settings.GEMINI_FALLBACK_MODELS = "gemini-flash-latest,gemini-3.1-flash-lite"
+
+    with patch("google.genai.Client") as MockClient:
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = "Success from fallback model."
+
+        # Model 1 throws 429 quota exhaustion; Model 2 succeeds
+        async def mock_generate(model, **kwargs):
+            if model == "gemini-3.5-flash-lite":
+                raise Exception("429 RESOURCE_EXHAUSTED. Quota exceeded for metric")
+            elif model == "gemini-flash-latest":
+                return mock_response
+            raise Exception(f"Unexpected model {model}")
+
+        mock_client.aio.models.generate_content = AsyncMock(side_effect=mock_generate)
+        MockClient.return_value = mock_client
+
+        adapter = GeminiAdapter()
+        with patch("asyncio.sleep", return_value=None):
+            result = await adapter.generate_response(
+                system_instruction="System prompt",
+                user_prompt="User query",
+                max_retries=2,
+            )
+
+        assert result == "Success from fallback model."
+        # Verify gemini-3.5-flash-lite was placed on cooldown
+        assert "gemini-3.5-flash-lite" in adapter._model_cooldowns
+        # Verify calls were made to both models
+        called_models = [call.kwargs.get("model") for call in mock_client.aio.models.generate_content.call_args_list]
+        assert called_models == ["gemini-3.5-flash-lite", "gemini-flash-latest"]
+
+
+@pytest.mark.asyncio
+async def test_gemini_adapter_respects_circuit_breaker_cooldown(mock_settings):
+    mock_settings.GEMINI_MODEL = "gemini-3.5-flash-lite"
+    mock_settings.GEMINI_FALLBACK_MODELS = "gemini-flash-latest"
+
+    with patch("google.genai.Client") as MockClient:
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = "Direct fallback response."
+        mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
+        MockClient.return_value = mock_client
+
+        adapter = GeminiAdapter(cooldown_seconds=600.0)
+        # Pre-mark primary model as on cooldown
+        import time
+        adapter._model_cooldowns["gemini-3.5-flash-lite"] = time.monotonic() + 500.0
+
+        active_models = adapter.get_active_models()
+        assert active_models == ["gemini-flash-latest"]
+
+        result = await adapter.generate_response(
+            system_instruction="System prompt",
+            user_prompt="User query",
+        )
+        assert result == "Direct fallback response."
+        first_call_model = mock_client.aio.models.generate_content.call_args_list[0].kwargs.get("model")
+        assert first_call_model == "gemini-flash-latest"
+
+
+@pytest.mark.asyncio
+async def test_gemini_adapter_cascades_structured_output_on_429(mock_settings):
+    mock_settings.GEMINI_MODEL = "gemini-3.5-flash-lite"
+    mock_settings.GEMINI_FALLBACK_MODELS = "gemini-flash-latest"
+
+    with patch("google.genai.Client") as MockClient:
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = '{"category": "Services", "confidence": 0.95, "summary": "Cascaded JSON success."}'
+
+        async def mock_generate(model, **kwargs):
+            if model == "gemini-3.5-flash-lite":
+                raise Exception("429 RESOURCE_EXHAUSTED")
+            return mock_response
+
+        mock_client.aio.models.generate_content = AsyncMock(side_effect=mock_generate)
+        MockClient.return_value = mock_client
+
+        adapter = GeminiAdapter()
+        with patch("asyncio.sleep", return_value=None):
+            result = await adapter.generate_structured_output(
+                system_instruction="System prompt",
+                user_prompt="User query",
+                response_schema=SampleOutputSchema,
+            )
+
+        assert isinstance(result, SampleOutputSchema)
+        assert result.category == "Services"
+        assert result.confidence == 0.95
+        assert result.summary == "Cascaded JSON success."
+

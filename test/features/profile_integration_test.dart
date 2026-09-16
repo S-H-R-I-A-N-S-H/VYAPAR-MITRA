@@ -81,6 +81,8 @@ void main() {
           child: MaterialApp(
             routes: {
               '/': (context) => const BusinessProfileScreen(),
+              '/home': (context) =>
+                  const Scaffold(body: Text('Home Screen')),
               '/interview': (context) =>
                   const Scaffold(body: Text('Interview Screen')),
             },
@@ -133,8 +135,8 @@ void main() {
         equals('ent-profile-uuid-8888'),
       );
 
-      // Verify navigation succeeded to /interview
-      expect(find.text('Interview Screen'), findsOneWidget);
+      // Verify navigation succeeded to /home
+      expect(find.text('Home Screen'), findsOneWidget);
     });
 
     testWidgets(

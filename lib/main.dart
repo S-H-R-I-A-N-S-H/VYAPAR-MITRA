@@ -10,9 +10,16 @@ Future<void> main() async {
   // Initialize Mappls SDK
   await MapplsService.initialize();
 
-  // Initialize Supabase when credentials are provided via --dart-define
-  const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-  const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+  // Initialize Supabase (configured with project defaults, overrideable via --dart-define)
+  const supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: 'https://wjwaftgtujrqdrzjsrqe.supabase.co',
+  );
+  const supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indqd2FmdGd0dWpycWRyempzcnFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxNTAwNzMsImV4cCI6MjEwNDcyNjA3M30.wNLam3JN47Stdzmwpc5Sk7j-oSt12E89eCWve4rzkt0',
+  );
 
   if (supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty) {
     try {

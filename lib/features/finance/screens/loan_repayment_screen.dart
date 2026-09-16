@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/audio/voice_service.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -36,6 +37,13 @@ class _LoanRepaymentScreenState extends ConsumerState<LoanRepaymentScreen> {
         appBar: VyaparTopAppBar(
           title: isHindi ? 'ऋण पुनर्भुगतान योजना' : 'Loan & Repayment Planner',
           showAudioButton: true,
+          onAudioTap: () {
+            final voiceService = ref.read(voiceServiceProvider);
+            final readout = isHindi
+                ? 'कृपया पहले व्यवसाय व पूंजी मॉडल का चयन करें ताकि ऋण किस्त की गणना की जा सके।'
+                : 'Please select a business profile first to calculate loan repayment schedule.';
+            voiceService.speakText(readout, languageCode: isHindi ? 'hi' : 'en');
+          },
         ),
         body: SafeArea(
           child: Center(
@@ -148,6 +156,13 @@ class _LoanRepaymentScreenState extends ConsumerState<LoanRepaymentScreen> {
             ? 'मासिक किस्त व मूलधन-ब्याज विभाजन'
             : 'EMI & Principal Amortization',
         showAudioButton: true,
+        onAudioTap: () {
+          final voiceService = ref.read(voiceServiceProvider);
+          final readout = isHindi
+              ? 'ऋण पुनर्भुगतान योजना: अनुमानित मासिक किस्त ₹${emi.toStringAsFixed(0)} है।'
+              : 'Loan repayment plan: Estimated monthly EMI is ₹${emi.toStringAsFixed(0)}.';
+          voiceService.speakText(readout, languageCode: isHindi ? 'hi' : 'en');
+        },
       ),
       body: SafeArea(
         child: SingleChildScrollView(

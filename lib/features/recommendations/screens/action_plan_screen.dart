@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/audio/voice_service.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -67,6 +68,13 @@ class _ActionPlanScreenState extends ConsumerState<ActionPlanScreen> {
         title: isHindi ? 'अंतिम सिफारिश व कार्ययोजना' : 'Executive Summary',
         subtitle: '${business.title} • 4-Week Plan',
         showAudioButton: true,
+        onAudioTap: () {
+          final voiceService = ref.read(voiceServiceProvider);
+          final readout = isHindi
+              ? '${business.title} के लिए 4-सप्ताह की कार्ययोजना तैयार है। पहले सप्ताह में पंजीकरण और स्थान चयन पूरा करें।'
+              : '4-week action plan for ${business.title} is ready. Week 1 focuses on registration and site setup.';
+          voiceService.speakText(readout, languageCode: isHindi ? 'hi' : 'en');
+        },
       ),
       body: SafeArea(
         child: SingleChildScrollView(

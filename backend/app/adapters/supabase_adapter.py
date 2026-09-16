@@ -36,6 +36,10 @@ class SupabaseAdapter:
                 self._admin_client = None
         return self._admin_client
 
+    @property
+    def is_connected(self) -> bool:
+        return self.client is not None
+
     def check_connection(self) -> Dict[str, Any]:
         """
         Executes a lightweight query against Supabase to verify live connectivity and measure latency.

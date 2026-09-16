@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/audio/voice_service.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -63,6 +64,13 @@ class _FinancialScenarioScreenState
             ? 'मासिक नकदी प्रवाह व तनाव परीक्षण'
             : 'Monthly Cash Flow & What-If',
         showAudioButton: true,
+        onAudioTap: () {
+          final voiceService = ref.read(voiceServiceProvider);
+          final readout = isHindi
+              ? 'वित्तीय योजना: अनुमानित मासिक नकदी शेष ₹${netCash.toStringAsFixed(0)} है। आप विभिन्न परिदृश्यों का परीक्षण कर सकते हैं।'
+              : 'Financial scenario: Projected monthly net cash in hand is ₹${netCash.toStringAsFixed(0)}. You can test what-if scenarios.';
+          voiceService.speakText(readout, languageCode: isHindi ? 'hi' : 'en');
+        },
       ),
       body: SafeArea(
         child: SingleChildScrollView(

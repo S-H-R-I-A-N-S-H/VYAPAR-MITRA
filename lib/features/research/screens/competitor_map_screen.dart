@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/audio/voice_service.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -34,6 +35,13 @@ class _CompetitorMapScreenState extends ConsumerState<CompetitorMapScreen> {
         title: isHindi ? 'स्थानीय प्रतियोगी मानचित्र' : 'Hyperlocal Competitor Map',
         subtitle: '${business.title} • ${profile.block}',
         showAudioButton: true,
+        onAudioTap: () {
+          final voiceService = ref.read(voiceServiceProvider);
+          final readout = isHindi
+              ? '${profile.block} में ${business.title} के लिए प्रतियोगी मानचित्र खुला है। आस-पास के प्रतिस्पर्धियों को देखें।'
+              : 'Competitor map opened for ${business.title} in ${profile.block}. Explore nearby market competitors.';
+          voiceService.speakText(readout, languageCode: isHindi ? 'hi' : 'en');
+        },
       ),
       body: SafeArea(
         child: competitorsAsync.when(

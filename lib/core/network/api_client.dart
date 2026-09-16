@@ -35,11 +35,14 @@ class ApiClient {
 
   Map<String, String> _buildHeaders() {
     final headers = <String, String>{
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json; charset=utf-8',
       'Accept': 'application/json',
     };
-    if (_authToken != null) {
-      headers['Authorization'] = 'Bearer $_authToken';
+    if (_authToken != null &&
+        _authToken!.trim().isNotEmpty &&
+        _authToken != 'null' &&
+        _authToken != 'undefined') {
+      headers['Authorization'] = 'Bearer ${_authToken!.trim()}';
     }
     return headers;
   }
@@ -68,7 +71,12 @@ class ApiClient {
       final combinedHeaders = _buildHeaders()..addAll(headers ?? {});
       final encodedBody = body != null ? jsonEncode(body) : null;
       final response = await _httpClient
-          .post(Uri.parse(url), headers: combinedHeaders, body: encodedBody)
+          .post(
+            Uri.parse(url),
+            headers: combinedHeaders,
+            body: encodedBody,
+            encoding: utf8,
+          )
           .timeout(const Duration(seconds: 15));
 
       return _handleResponse(response);
@@ -87,7 +95,12 @@ class ApiClient {
       final combinedHeaders = _buildHeaders()..addAll(headers ?? {});
       final encodedBody = body != null ? jsonEncode(body) : null;
       final response = await _httpClient
-          .patch(Uri.parse(url), headers: combinedHeaders, body: encodedBody)
+          .patch(
+            Uri.parse(url),
+            headers: combinedHeaders,
+            body: encodedBody,
+            encoding: utf8,
+          )
           .timeout(const Duration(seconds: 12));
 
       return _handleResponse(response);
@@ -112,8 +125,16 @@ class ApiClient {
       String errorMessage = 'Server error (${response.statusCode})';
       try {
         final bodyJson = jsonDecode(utf8.decode(response.bodyBytes));
-        if (bodyJson is Map && bodyJson.containsKey('detail')) {
-          errorMessage = bodyJson['detail'].toString();
+        if (bodyJson is Map) {
+          if (bodyJson.containsKey('message') &&
+              bodyJson['message'] != null &&
+              bodyJson['message'].toString().isNotEmpty) {
+            errorMessage = bodyJson['message'].toString();
+          } else if (bodyJson.containsKey('detail') &&
+              bodyJson['detail'] != null &&
+              bodyJson['detail'].toString().isNotEmpty) {
+            errorMessage = bodyJson['detail'].toString();
+          }
         }
       } catch (_) {}
       throw ApiException(errorMessage, statusCode: response.statusCode);

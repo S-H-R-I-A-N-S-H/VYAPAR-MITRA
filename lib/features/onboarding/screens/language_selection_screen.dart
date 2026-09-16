@@ -59,15 +59,20 @@ class _LanguageSelectionScreenState
     ),
   ];
 
-  late String _selectedCode;
+  String _selectedCode = 'hi';
 
   @override
   void initState() {
     super.initState();
-    _selectedCode = ref.read(localeProvider).languageCode;
-    if (!_languages.any((l) => l.code == _selectedCode)) {
-      _selectedCode = 'hi';
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final code = ref.read(localeProvider).languageCode;
+      final resolved =
+          _languages.any((l) => l.code == code) ? code : 'hi';
+      if (_selectedCode != resolved) {
+        setState(() => _selectedCode = resolved);
+      }
+    });
   }
 
   void _onLanguageTap(String code) {

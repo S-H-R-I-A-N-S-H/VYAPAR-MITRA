@@ -5,14 +5,14 @@ from pydantic import BaseModel, Field
 
 class ResearchProjectCreate(BaseModel):
     business_id: str
-    location_id: str
+    location_id: Optional[str] = None
     research_scope: Optional[str] = "local_5km"
 
 
 class ResearchProjectResponse(BaseModel):
     id: str
     business_id: str
-    location_id: str
+    location_id: Optional[str] = None
     status: str = Field(description="PLANNED, SECONDARY_RESEARCH, PRIMARY_RESEARCH, ANALYSIS, COMPLETED, FAILED")
     created_at: datetime
     updated_at: datetime

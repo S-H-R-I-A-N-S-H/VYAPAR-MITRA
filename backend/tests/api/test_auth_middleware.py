@@ -126,3 +126,29 @@ def test_auth_mock_token_dev_vs_prod(auth_client, monkeypatch):
         headers={"Authorization": "Bearer mock-user-local-123"},
     )
     assert response_prod.status_code == 401
+
+
+def test_auth_dev_allow_anonymous(auth_client, monkeypatch):
+    """Verify DEV_ALLOW_ANONYMOUS permits anonymous / fallback requests in development but not in production."""
+    # Dev mode with DEV_ALLOW_ANONYMOUS = True:
+    monkeypatch.setattr(settings, "ENVIRONMENT", "development")
+    monkeypatch.setattr(settings, "DEV_ALLOW_ANONYMOUS", True)
+
+    # 1. No header
+    res_no_header = auth_client.get("/protected/user-id")
+    assert res_no_header.status_code == 200
+    assert res_no_header.json()["user_id"] == "dev-001"
+
+    # 2. Malformed / expired token in dev mode
+    res_invalid_header = auth_client.get(
+        "/protected/user-id",
+        headers={"Authorization": "Bearer invalid_or_expired_jwt"},
+    )
+    assert res_invalid_header.status_code == 200
+    assert res_invalid_header.json()["user_id"] == "dev-001"
+
+    # Production mode with DEV_ALLOW_ANONYMOUS = True (should strictly reject):
+    monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    res_prod = auth_client.get("/protected/user-id")
+    assert res_prod.status_code == 401
+
