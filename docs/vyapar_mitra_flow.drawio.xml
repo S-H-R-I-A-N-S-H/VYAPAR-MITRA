@@ -1,176 +1,179 @@
 <mxfile host="app.diagrams.net" agent="Mozilla/5.0">
   <diagram id="vyapar-mitra-flow-16x9" name="Vyapar Mitra Architecture (16:9 Slide)">
-    <mxGraphModel dx="1928" dy="844" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" background="#FFFFFF" math="0" shadow="0">
+    <mxGraphModel dx="2169" dy="1331" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" background="#FFFFFF" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="user_box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FAFC;strokeColor=#CBD5E1;strokeWidth=1.5;align=center;" value="&lt;b style=&quot;font-size: 16px; color: rgb(30, 41, 59);&quot;&gt;Rural Entrepreneur&lt;/b&gt;&lt;div&gt;&lt;br/&gt;&lt;/div&gt;" vertex="1">
-          <mxGeometry height="65" width="240" x="60" y="130" as="geometry" />
+        <mxCell id="user_box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FAFC;strokeColor=#CBD5E1;strokeWidth=2;align=center;" value="&lt;b style=&quot;font-size: 20px; color: rgb(30, 41, 59);&quot;&gt;Rural Entrepreneur&lt;/b&gt;" vertex="1">
+          <mxGeometry height="60" width="300" x="140" y="80" as="geometry" />
         </mxCell>
-        <mxCell id="flutter_app" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EFF6FF;strokeColor=#3B82F6;strokeWidth=2;verticalAlign=top;spacingTop=10;arcSize=6;" value="&lt;b style=&quot;font-size: 19px; color: rgb(29, 78, 216);&quot;&gt;Flutter Mobile App&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size: 12px; color: rgb(51, 65, 85); font-weight: 600;&quot;&gt;Android • iOS • Web&lt;/span&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left; font-size: 12px; line-height: 1.5; padding-left: 4px;&quot;&gt;• Voice Input &amp;amp; Audio Responses&lt;br&gt;• Interactive Market Maps&lt;br&gt;• &lt;b style=&quot;color: rgb(5, 150, 105);&quot;&gt;Works offline (Auto-Sync):&lt;/b&gt;&lt;br&gt;&amp;nbsp;&amp;nbsp;- Save Daily Sales (Logbook)&lt;br&gt;&amp;nbsp;&amp;nbsp;- Financial calculations&lt;br&gt;&amp;nbsp;&amp;nbsp;- Read Saved Schemes &amp;amp; PDFs&lt;/div&gt;" vertex="1">
-          <mxGeometry height="230" width="240" x="60" y="240" as="geometry" />
+        <mxCell id="flutter_app" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EFF6FF;strokeColor=#3B82F6;strokeWidth=2;verticalAlign=top;spacingTop=15;arcSize=6;align=center;" value="&lt;div&gt;&lt;b style=&quot;font-size: 26px; color: rgb(29, 78, 216);&quot;&gt;Flutter Mobile App&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 19px; color: rgb(51, 65, 85); font-weight: 600;&quot;&gt;Android • iOS • Web&lt;/span&gt;&lt;/div&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left; line-height: 1.6; padding-left: 10px; font-size: 20px;&quot;&gt;• Voice Input &amp;amp; Audio Responses&lt;br&gt;• Interactive Market Maps&lt;br&gt;• &lt;b style=&quot;color: rgb(5, 150, 105);&quot;&gt;Works offline (Auto-Sync):&lt;/b&gt;&lt;br&gt;&amp;nbsp;&amp;nbsp;- Save Daily Sales (Logbook)&lt;br&gt;&amp;nbsp;&amp;nbsp;- Financial calculations&lt;br&gt;&amp;nbsp;&amp;nbsp;- Read Saved Schemes &amp;amp; PDFs&lt;/div&gt;" vertex="1">
+          <mxGeometry height="305" width="380" x="100" y="200" as="geometry" />
         </mxCell>
-        <mxCell id="supabase_box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECFDF5;strokeColor=#10B981;strokeWidth=2;verticalAlign=top;spacingTop=10;arcSize=6;" value="&lt;b style=&quot;font-size: 18px; color: rgb(6, 95, 70);&quot;&gt;Supabase Platform&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left; font-size: 12px; line-height: 1.5; padding-left: 4px;&quot;&gt;&lt;b&gt;• Supabase Auth:&lt;/b&gt; User Sign-in &amp;amp; Secure JWT&lt;br&gt;&lt;b&gt;• PostgreSQL Database:&lt;/b&gt; User Info, Business Details &amp;amp; Location Coordinates&lt;br&gt;&lt;b&gt;• Govt Scheme Rules&lt;/b&gt;&lt;br&gt;&lt;b&gt;• Business Logbook History&lt;/b&gt;&lt;/div&gt;" vertex="1">
-          <mxGeometry height="190" width="240" x="60" y="580" as="geometry" />
+        <mxCell id="supabase_box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECFDF5;strokeColor=#10B981;strokeWidth=2;verticalAlign=top;spacingTop=15;arcSize=6;" value="&lt;div style=&quot;line-height: 1.6;&quot;&gt;&lt;b style=&quot;color: rgb(6, 95, 70); font-size: 26px;&quot;&gt;Supabase Platform&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left; padding-left: 10px; font-size: 20px; line-height: 190%;&quot;&gt;&lt;b&gt;• Supabase Auth:&lt;/b&gt; User Sign-in &amp;amp; Secure JWT&lt;br&gt;&lt;b&gt;• PostgreSQL Database:&lt;/b&gt; User Info, Business Details &amp;amp; Location Coordinates&lt;br&gt;&lt;b&gt;• Govt Scheme Rules&lt;/b&gt;&lt;br&gt;&lt;b&gt;• Business Logbook History&lt;/b&gt;&lt;/div&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="280" width="450" x="60" y="600" as="geometry" />
         </mxCell>
-        <mxCell id="backend_boundary" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F0F9FF;strokeColor=#0284C7;strokeWidth=2;verticalAlign=top;spacingTop=12;arcSize=4;" value="&lt;b style=&quot;font-size: 19px; color: rgb(3, 105, 161);&quot;&gt;FastAPI Backend Server (Core Engine)&lt;/b&gt;&amp;nbsp;&amp;nbsp;&lt;span style=&quot;font-size: 12px; color: #0284C7; font-weight: bold;&quot;&gt;[Python 3.14 • Render]&lt;/span&gt;" vertex="1">
-          <mxGeometry height="740" width="550" x="480" y="100" as="geometry" />
+        <mxCell id="backend_boundary" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F0F9FF;strokeColor=#0284C7;strokeWidth=2;verticalAlign=top;spacingTop=15;arcSize=4;" value="&lt;font style=&quot;&quot;&gt;&lt;b style=&quot;font-size: 26px; color: rgb(3, 105, 161);&quot;&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &lt;/b&gt;&lt;b style=&quot;color: rgb(3, 105, 161);&quot;&gt;&lt;font style=&quot;font-size: 30px;&quot;&gt;FastAPI Backend&amp;nbsp;&lt;/font&gt;&lt;/b&gt;&lt;span style=&quot;font-size: 26px; color: rgb(3, 105, 161);&quot;&gt;&amp;nbsp; &amp;nbsp;&lt;/span&gt;&lt;span style=&quot;color: rgb(2, 132, 199); font-weight: bold;&quot;&gt;&lt;font style=&quot;font-size: 16px;&quot;&gt;[Python 3.14 • Render]&lt;/font&gt;&lt;/span&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="780" width="600" x="940" y="100" as="geometry" />
         </mxCell>
-        <mxCell id="engines_panel" parent="backend_boundary" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF7ED;strokeColor=#F97316;strokeWidth=2;verticalAlign=top;spacingTop=8;arcSize=6;" value="&lt;b style=&quot;font-size: 16px; color: rgb(154, 52, 18);&quot;&gt;OUR CORE ENGINES PANEL&lt;/b&gt;&amp;nbsp;&amp;nbsp;&lt;span style=&quot;font-size: 11px; color: rgb(234, 88, 12); font-weight: bold;&quot;&gt;[Core Innovation]&lt;/span&gt;" vertex="1">
-          <mxGeometry height="460" width="500" x="25" y="50" as="geometry" />
+        <mxCell id="engines_panel" parent="backend_boundary" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF7ED;strokeColor=#F97316;strokeWidth=2;verticalAlign=top;spacingTop=12;arcSize=6;" value="&lt;b style=&quot;font-size: 22px; color: rgb(154, 52, 18);&quot;&gt;OUR CORE ENGINES PANEL&lt;/b&gt;&amp;nbsp;&amp;nbsp;&lt;span style=&quot;font-size: 14px; color: rgb(234, 88, 12); font-weight: bold;&quot;&gt;[Core Innovation]&lt;/span&gt;" vertex="1">
+          <mxGeometry height="480" width="550" x="25" y="60" as="geometry" />
         </mxCell>
-        <mxCell id="engine_research" parent="engines_panel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#3B82F6;strokeWidth=1.5;align=left;spacingLeft=14;" value="&lt;b style=&quot;font-size: 14px; color: #0F172A;&quot;&gt;1. Hyper-Local Research Engine&lt;/b&gt;" vertex="1">
-          <mxGeometry height="56.952380952380956" width="460" x="20" y="49.28571428571429" as="geometry" />
+        <mxCell id="engine_research" parent="engines_panel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#3B82F6;strokeWidth=1.5;align=left;spacingLeft=18;" value="&lt;b style=&quot;color: rgb(15, 23, 42);&quot;&gt;&lt;font style=&quot;font-size: 20px;&quot;&gt;1. Hyper-Local Research Engine&lt;/font&gt;&lt;/b&gt;" vertex="1">
+          <mxGeometry height="75" width="510" x="20" y="55" as="geometry" />
         </mxCell>
-        <mxCell id="tag_research" parent="engine_research" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#2563EB;fontSize=11;fontStyle=1;fontColor=#1E40AF;" value="User Data + Web" vertex="1">
-          <mxGeometry height="30.66666666666667" width="125" x="325" y="13.142857142857144" as="geometry" />
+        <mxCell id="tag_research" parent="engine_research" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#2563EB;fontSize=13;fontStyle=1;fontColor=#1E40AF;" value="User Data + Web" vertex="1">
+          <mxGeometry height="40.38461538461538" width="110" x="390" y="17.307692307692307" as="geometry" />
         </mxCell>
-        <mxCell id="engine_finance" parent="engines_panel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#10B981;strokeWidth=1.5;align=left;spacingLeft=14;" value="&lt;b style=&quot;font-size: 14px; color: rgb(15, 23, 42);&quot;&gt;2. Financial Structuring Engine&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size: 11px; color: rgb(71, 85, 105);&quot;&gt;Calculates loan EMI, monthly costs &amp;amp; profit margins&lt;/span&gt;" vertex="1">
-          <mxGeometry height="61.33333333333334" width="460" x="20" y="120.47619047619048" as="geometry" />
+        <mxCell id="engine_finance" parent="engines_panel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#10B981;strokeWidth=1.5;align=left;spacingLeft=18;" value="&lt;font style=&quot;line-height: 150%;&quot;&gt;&lt;b style=&quot;color: rgb(15, 23, 42);&quot;&gt;&lt;font style=&quot;font-size: 21px; line-height: 180%;&quot;&gt;2. Financial Structuring Engine&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size: 16px; color: rgb(71, 85, 105);&quot;&gt;Calculates loan EMI, monthly costs &amp;amp; profit margins&lt;/span&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="90" width="510" x="20" y="150" as="geometry" />
         </mxCell>
-        <mxCell id="tag_finance" parent="engine_finance" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=#16A34A;fontSize=11;fontStyle=1;fontColor=#15803D;" value="Python Code" vertex="1">
-          <mxGeometry height="30.67" width="125" x="325" y="15.33" as="geometry" />
+        <mxCell id="tag_finance" parent="engine_finance" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=#16A34A;fontSize=13;fontStyle=1;fontColor=#15803D;" value="Python Code" vertex="1">
+          <mxGeometry height="42" width="110" x="390" y="24" as="geometry" />
         </mxCell>
-        <mxCell id="engine_scheme" parent="engines_panel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#10B981;strokeWidth=1.5;align=left;spacingLeft=14;" value="&lt;b style=&quot;font-size: 14px; color: rgb(15, 23, 42);&quot;&gt;3. Scheme Eligibility Engine&lt;/b&gt;" vertex="1">
-          <mxGeometry height="56.952380952380956" width="460" x="20" y="197.14285714285717" as="geometry" />
+        <mxCell id="engine_scheme" parent="engines_panel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#10B981;strokeWidth=1.5;align=left;spacingLeft=18;" value="&lt;b style=&quot;color: rgb(15, 23, 42);&quot;&gt;&lt;font style=&quot;font-size: 21px;&quot;&gt;3. Scheme Eligibility Engine&lt;/font&gt;&lt;/b&gt;" vertex="1">
+          <mxGeometry height="75" width="510" x="20" y="255" as="geometry" />
         </mxCell>
-        <mxCell id="tag_scheme" parent="engine_scheme" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=#16A34A;fontSize=11;fontStyle=1;fontColor=#15803D;" value="Stored Schemes" vertex="1">
-          <mxGeometry height="30.67" width="125" x="325" y="13.14" as="geometry" />
+        <mxCell id="tag_scheme" parent="engine_scheme" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=#16A34A;fontSize=13;fontStyle=1;fontColor=#15803D;" value="Stored Schemes" vertex="1">
+          <mxGeometry height="40.38461538461538" width="110" x="390" y="17.307692307692307" as="geometry" />
         </mxCell>
-        <mxCell id="engine_conflict" parent="engines_panel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#06B6D4;strokeWidth=1.5;align=left;spacingLeft=14;" value="&lt;b style=&quot;font-size: 14px; color: rgb(15, 23, 42);&quot;&gt;4. Evidence Analysis &amp;amp; Conflict Detector&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size: 11px; color: rgb(71, 85, 105);&quot;&gt;Compares internet claims with ground village survey&lt;/span&gt;" vertex="1">
-          <mxGeometry height="61.33333333333334" width="460" x="20" y="268.33333333333337" as="geometry" />
+        <mxCell id="engine_conflict" parent="engines_panel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#06B6D4;strokeWidth=1.5;align=left;spacingLeft=18;" value="&lt;div style=&quot;line-height: 170%;&quot;&gt;&lt;b style=&quot;color: rgb(15, 23, 42);&quot;&gt;&lt;font style=&quot;font-size: 19px; line-height: 170%;&quot;&gt;4. Evidence Analysis &amp;amp; Conflict Detector&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;color: rgb(71, 85, 105);&quot;&gt;&lt;font style=&quot;line-height: 170%; font-size: 17px;&quot;&gt;Compares internet claims with local survey&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="510" x="20" y="345" as="geometry" />
         </mxCell>
-        <mxCell id="tag_conflict" parent="engine_conflict" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontSize=11;fontStyle=1;fontColor=#0369A1;" value="Rules-Based Analysis" vertex="1">
-          <mxGeometry height="30.67" width="125" x="325" y="15.33" as="geometry" />
+        <mxCell id="tag_conflict" parent="engine_conflict" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontSize=13;fontStyle=1;fontColor=#0369A1;" value="Rules-Based" vertex="1">
+          <mxGeometry height="42" width="110" x="390" y="24" as="geometry" />
         </mxCell>
-        <mxCell id="panel_tagline" parent="engines_panel" style="text;html=1;align=center;verticalAlign=middle;" value="&lt;b style=&quot;font-size: 14px; color: #C2410C; letter-spacing: 0.5px;&quot;&gt;★ AI Explains. Deterministic Code Decides. ★&lt;/b&gt;" vertex="1">
-          <mxGeometry height="38.333333333333336" width="380" x="60" y="345.00000000000006" as="geometry" />
+        <mxCell id="panel_tagline" parent="engines_panel" style="text;html=1;align=center;verticalAlign=middle;" value="&lt;b style=&quot;font-size: 16px; color: #C2410C; letter-spacing: 0.5px;&quot;&gt;★ AI Explains. Deterministic Code Decides. ★&lt;/b&gt;" vertex="1">
+          <mxGeometry height="40" width="510" x="20" y="440" as="geometry" />
         </mxCell>
-        <mxCell id="dpr_generator" parent="backend_boundary" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6366F1;strokeWidth=1.5;align=center;spacingLeft=14;" value="&lt;b style=&quot;font-size: 14px; color: rgb(30, 41, 59);&quot;&gt;DPR &amp;amp; Monthly Statement Generator (ReportLab)&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size: 11px; color: rgb(71, 85, 105);&quot;&gt;Generates bank-ready loan project reports &amp;amp; monthly financial statements (PDF)&lt;/span&gt;" vertex="1">
-          <mxGeometry height="65" width="500" x="25" y="530" as="geometry" />
+        <mxCell id="dpr_generator" parent="backend_boundary" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6366F1;strokeWidth=1.5;align=center;spacingLeft=14;" value="&lt;font style=&quot;font-size: 21px;&quot;&gt;&lt;b style=&quot;color: rgb(30, 41, 59);&quot;&gt;DPR &amp;amp; Monthly Statement Generator (ReportLab)&lt;/b&gt;&lt;br&gt;&lt;/font&gt;&lt;b style=&quot;font-size: 16px; color: rgb(71, 85, 105);&quot;&gt;Generates bank-ready loan project reports &amp;amp; monthly financial statements (PDF)&lt;/b&gt;" vertex="1">
+          <mxGeometry height="110" width="550" x="25" y="555" as="geometry" />
         </mxCell>
-        <mxCell id="redis_box" parent="backend_boundary" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF2F2;strokeColor=#EF4444;strokeWidth=1.5;fontSize=12;" value="&lt;b style=&quot;font-size: 14px; color: rgb(185, 28, 28);&quot;&gt;Redis&lt;/b&gt; — Fast In-Memory Data Cache" vertex="1">
-          <mxGeometry height="42" width="500" x="25" y="630" as="geometry" />
+        <mxCell id="redis_box" parent="backend_boundary" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF2F2;strokeColor=#EF4444;strokeWidth=1.5;fontSize=16;" value="&lt;font style=&quot;font-size: 21px;&quot;&gt;&lt;b style=&quot;color: rgb(185, 28, 28);&quot;&gt;Redis&lt;/b&gt;&amp;nbsp;- Fast In-Memory Data Cache&lt;/font&gt;" vertex="1">
+          <mxGeometry height="70" width="550" x="25" y="685" as="geometry" />
         </mxCell>
-        <mxCell id="ext_bhashini" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFBEB;strokeColor=#F59E0B;strokeWidth=2;verticalAlign=top;spacingTop=10;arcSize=6;" value="&lt;b style=&quot;font-size: 17px; color: rgb(194, 65, 12);&quot;&gt;BHASHINI API&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left; font-size: 12px; line-height: 1.5; padding-left: 4px;&quot;&gt;• Voice-to-Text &amp;amp; Text-to-Speech&lt;br&gt;• Translates across Indian Languages&lt;/div&gt;" vertex="1">
-          <mxGeometry height="95" width="280" x="1270" y="130" as="geometry" />
+        <mxCell id="ext_bhashini" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFBEB;strokeColor=#F59E0B;strokeWidth=2;verticalAlign=top;spacingTop=15;arcSize=6;" value="&lt;div style=&quot;line-height: 1.6;&quot;&gt;&lt;b style=&quot;color: rgb(194, 65, 12); font-size: 26px;&quot;&gt;BHASHINI API&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left; padding-left: 10px; font-size: 20px;&quot;&gt;• Voice-to-Text &amp;amp; Text-to-Speech&lt;br&gt;• Translates across Indian Languages&lt;/div&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="160" width="410" x="2010" y="110" as="geometry" />
         </mxCell>
-        <mxCell id="ext_mappls" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF2F2;strokeColor=#EF4444;strokeWidth=2;verticalAlign=top;spacingTop=10;arcSize=6;" value="&lt;b style=&quot;font-size: 17px; color: rgb(185, 28, 28);&quot;&gt;Mappls API (MapmyIndia)&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left; font-size: 12px; line-height: 1.5; padding-left: 4px;&quot;&gt;• Maps Local Market Competition&lt;br&gt;• Computes Transport Distance &amp;amp; Fuel Cost&lt;/div&gt;" vertex="1">
-          <mxGeometry height="95" width="280" x="1270" y="275" as="geometry" />
+        <mxCell id="ext_mappls" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF2F2;strokeColor=#EF4444;strokeWidth=2;verticalAlign=top;spacingTop=15;arcSize=6;" value="&lt;div style=&quot;line-height: 1.6;&quot;&gt;&lt;b style=&quot;color: rgb(185, 28, 28); font-size: 26px;&quot;&gt;Mappls API (MapmyIndia)&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left; padding-left: 10px; font-size: 20px;&quot;&gt;• Maps Local Market Competition&lt;br&gt;• Computes Transport Distance &amp;amp; Fuel Cost&lt;/div&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="170" width="410" x="2010" y="290" as="geometry" />
         </mxCell>
-        <mxCell id="ext_gemini" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EFF6FF;strokeColor=#3B82F6;strokeWidth=2;verticalAlign=top;spacingTop=10;arcSize=6;" value="&lt;b style=&quot;font-size: 17px; color: #1D4ED8;&quot;&gt;Google Gemini (GenAI)&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left; font-size: 12px; line-height: 1.5; padding-left: 4px;&quot;&gt;• Understands User Voice &amp;amp; Business Needs&lt;br&gt;• Continuous Business Insights from Logbook&lt;br&gt;• Translates Market Data into Simple Advice&lt;/div&gt;" vertex="1">
-          <mxGeometry height="110" width="280" x="1270" y="420" as="geometry" />
+        <mxCell id="ext_gemini" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EFF6FF;strokeColor=#3B82F6;strokeWidth=2;verticalAlign=top;spacingTop=15;arcSize=6;" value="&lt;div style=&quot;line-height: 1.6;&quot;&gt;&lt;b style=&quot;color: rgb(29, 78, 216); font-size: 26px;&quot;&gt;Google Gemini (GenAI)&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left; padding-left: 10px;&quot;&gt;&lt;span style=&quot;font-size: 20px;&quot;&gt;• &lt;/span&gt;&lt;font style=&quot;font-size: 19px;&quot;&gt;Understands User Voice &amp;amp; Business Needs&lt;br&gt;• Continuous Business Insights from Logbook&lt;br&gt;• Translates Market Data into Simple Advice&lt;/font&gt;&lt;/div&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="200" width="410" x="2010" y="480" as="geometry" />
         </mxCell>
-        <mxCell id="ext_govt" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#9CA3AF;strokeWidth=1.5;verticalAlign=top;spacingTop=10;arcSize=6;" value="&lt;b style=&quot;font-size: 16px; color: rgb(55, 65, 81);&quot;&gt;Govt. Portals &amp;amp; Schemes&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left; font-size: 12px; line-height: 1.5; padding-left: 4px;&quot;&gt;• PMEGP, MUDRA &amp;amp; Stand-Up India&lt;br&gt;• PM Vishwakarma, Udyam &amp;amp; Jan Samarth&lt;/div&gt;" vertex="1">
-          <mxGeometry height="95" width="280" x="1270" y="580" as="geometry" />
+        <mxCell id="ext_govt" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#9CA3AF;strokeWidth=1.5;verticalAlign=top;spacingTop=15;arcSize=6;" value="&lt;div style=&quot;line-height: 1.6;&quot;&gt;&lt;b style=&quot;color: rgb(55, 65, 81); font-size: 26px;&quot;&gt;Govt. Portals &amp;amp; Schemes&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left; padding-left: 10px; font-size: 20px;&quot;&gt;• PMEGP, MUDRA &amp;amp; Stand-Up India&lt;br&gt;• PM Vishwakarma, Udyam &amp;amp; Jan Samarth&lt;/div&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="170" width="410" x="2010" y="700" as="geometry" />
         </mxCell>
-        <mxCell id="flow0" edge="1" parent="1" source="user_box" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#475569;fontColor=#1E293B;" target="flutter_app" value="&lt;b style=&quot;font-size: 12px;&quot;&gt;Voice Input /&lt;br&gt;GPS Location&lt;/b&gt;">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="flow0" edge="1" parent="1" source="user_box" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#475569;fontColor=#1E293B;labelBackgroundColor=#F8FAFC;" target="flutter_app" value="&lt;b style=&quot;font-size: 16px;&quot;&gt;Voice Input /&lt;br&gt;GPS Location&lt;/b&gt;">
+          <mxGeometry relative="1" y="70" as="geometry">
+            <mxPoint y="-1" as="offset" />
+          </mxGeometry>
         </mxCell>
-        <mxCell id="flow1" edge="1" parent="1" source="flutter_app" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2.5;strokeColor=#2563EB;fontColor=#1E40AF;" target="supabase_box" value="&lt;b style=&quot;color: rgb(37, 99, 235); font-size: 12px;&quot;&gt;[Step 1]&lt;br&gt;User Login&lt;/b&gt;">
-          <mxGeometry relative="1" x="-0.2" as="geometry">
+        <mxCell id="flow1" edge="1" parent="1" source="flutter_app" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2.5;strokeColor=#2563EB;fontColor=#1E40AF;labelBackgroundColor=#FFFFFF;" target="supabase_box" value="&lt;b style=&quot;color: rgb(37, 99, 235); font-size: 18px;&quot;&gt;[Step 1]&lt;br&gt;User Login&lt;/b&gt;">
+          <mxGeometry relative="1" x="-0.0526" y="-60" as="geometry">
             <mxPoint as="offset" />
             <Array as="points">
-              <mxPoint x="135" y="520" />
-              <mxPoint x="135" y="520" />
+              <mxPoint x="230" y="540" />
+              <mxPoint x="230" y="540" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="flow1b" edge="1" parent="1" source="supabase_box" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#16A34A;strokeDasharray=4 4;fontColor=#15803D;" target="flutter_app" value="&lt;b style=&quot;color: rgb(22, 163, 74); font-size: 12px;&quot;&gt;Signed&lt;br&gt;JWT Token&lt;/b&gt;">
-          <mxGeometry relative="1" x="-0.2" as="geometry">
+        <mxCell id="flow1b" edge="1" parent="1" source="supabase_box" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#16A34A;strokeDasharray=4 4;fontColor=#15803D;labelBackgroundColor=#FFFFFF;" target="flutter_app" value="&lt;b style=&quot;color: rgb(22, 163, 74);&quot;&gt;&lt;font style=&quot;font-size: 18px;&quot;&gt;Signed&lt;br&gt;JWT Token&lt;/font&gt;&lt;/b&gt;">
+          <mxGeometry relative="1" x="0.0526" y="-60" as="geometry">
+            <mxPoint y="-1" as="offset" />
+            <Array as="points">
+              <mxPoint x="340" y="550" />
+              <mxPoint x="340" y="550" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow2" edge="1" parent="1" source="flutter_app" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;strokeColor=#2563EB;fontColor=#1E40AF;labelBackgroundColor=#FFFFFF;" target="backend_boundary" value="&lt;font style=&quot;font-size: 24px;&quot;&gt;&lt;b style=&quot;color: rgb(37, 99, 235);&quot;&gt;[Step 2]&lt;/b&gt;&lt;br&gt;&lt;b style=&quot;color: rgb(37, 99, 235);&quot;&gt;User voice/text input&lt;/b&gt;&lt;/font&gt;">
+          <mxGeometry relative="1" x="-0.0103" y="30" as="geometry">
             <mxPoint as="offset" />
             <Array as="points">
-              <mxPoint x="225" y="530" />
-              <mxPoint x="225" y="530" />
+              <mxPoint x="735" y="300" />
+              <mxPoint x="735" y="300" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="flow2" edge="1" parent="1" source="flutter_app" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;strokeColor=#2563EB;fontColor=#1E40AF;" target="backend_boundary" value="&lt;b style=&quot;color: rgb(37, 99, 235); font-size: 13px;&quot;&gt;[Step 2]&lt;br&gt;User voice/text input&lt;/b&gt;">
-          <mxGeometry relative="1" y="-18" as="geometry">
-            <mxPoint x="5" y="-3" as="offset" />
-            <Array as="points">
-              <mxPoint x="390" y="320" />
-              <mxPoint x="390" y="320" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="flow3" edge="1" parent="1" source="backend_boundary" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#EA580C;fontColor=#C2410C;" target="ext_bhashini" value="&lt;b style=&quot;color: rgb(234, 88, 12); font-size: 12px;&quot;&gt;[Step 3a]&lt;/b&gt;&lt;br&gt;Voice Audio &amp;amp; Language">
-          <mxGeometry relative="1" y="-12" as="geometry">
-            <mxPoint x="-5" y="-16" as="offset" />
-            <Array as="points">
-              <mxPoint x="1140" y="155" />
-              <mxPoint x="1140" y="155" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="flow3_resp" edge="1" parent="1" source="ext_bhashini" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#EA580C;strokeDasharray=5 3;fontColor=#C2410C;" target="backend_boundary" value="&lt;b style=&quot;color: rgb(234, 88, 12); font-size: 12px;&quot;&gt;[Step 3b]&lt;/b&gt;&lt;br&gt;Text Transcript &amp;amp; Voice Audio">
-          <mxGeometry relative="1" y="12" as="geometry">
-            <mxPoint x="-5" y="16" as="offset" />
-            <Array as="points">
-              <mxPoint x="1140" y="200" />
-              <mxPoint x="1140" y="200" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="flow4" edge="1" parent="1" source="backend_boundary" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#DC2626;fontColor=#B91C1C;" target="ext_mappls" value="&lt;b style=&quot;color: rgb(220, 38, 38); font-size: 12px;&quot;&gt;[Step 4a]&lt;/b&gt;&lt;br&gt;Location&amp;nbsp;">
-          <mxGeometry relative="1" y="-12" as="geometry">
-            <mxPoint x="-5" y="-16" as="offset" />
-            <Array as="points">
-              <mxPoint x="1140" y="300" />
-              <mxPoint x="1140" y="300" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="flow4_resp" edge="1" parent="1" source="ext_mappls" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#DC2626;strokeDasharray=5 3;fontColor=#B91C1C;" target="backend_boundary" value="&lt;b style=&quot;color: rgb(220, 38, 38); font-size: 12px;&quot;&gt;[Step 4b]&lt;/b&gt;&lt;br&gt;Nearby Registered Businesses">
-          <mxGeometry relative="1" y="25" as="geometry">
+        <mxCell id="flow3" edge="1" parent="1" source="backend_boundary" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#EA580C;fontColor=#C2410C;labelBackgroundColor=#FFFFFF;" target="ext_bhashini" value="&lt;font style=&quot;font-size: 23px;&quot;&gt;&lt;b style=&quot;color: rgb(234, 88, 12);&quot;&gt;[Step 3a]&lt;/b&gt;&lt;br&gt;&lt;b style=&quot;&quot;&gt;Voice Audio &amp;amp; Language&lt;/b&gt;&lt;/font&gt;">
+          <mxGeometry relative="1" x="0.0112" y="20" as="geometry">
             <mxPoint as="offset" />
             <Array as="points">
-              <mxPoint x="1140" y="345" />
-              <mxPoint x="1140" y="345" />
+              <mxPoint x="1790" y="190" />
+              <mxPoint x="1790" y="190" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="flow5" edge="1" parent="1" source="backend_boundary" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#2563EB;fontColor=#1D4ED8;" target="ext_gemini" value="&lt;b style=&quot;color: rgb(37, 99, 235); font-size: 12px;&quot;&gt;[Step 5a]&lt;/b&gt;&lt;br&gt;Real-Time Web Search&lt;br&gt;&amp;amp; Idea Analysis">
-          <mxGeometry relative="1" y="-12" as="geometry">
-            <mxPoint x="-5" y="-20" as="offset" />
+        <mxCell id="flow3_resp" edge="1" parent="1" source="ext_bhashini" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#EA580C;strokeDasharray=5 3;fontColor=#C2410C;labelBackgroundColor=#FFFFFF;" target="backend_boundary" value="&lt;font style=&quot;font-size: 23px;&quot;&gt;&lt;b style=&quot;color: rgb(234, 88, 12);&quot;&gt;[Step 3b]&lt;/b&gt;&lt;br&gt;&lt;b style=&quot;&quot;&gt;Text Transcript &amp;amp; Voice Audio&lt;/b&gt;&lt;/font&gt;">
+          <mxGeometry relative="1" x="-0.0112" y="30" as="geometry">
+            <mxPoint as="offset" />
             <Array as="points">
-              <mxPoint x="1140" y="445" />
-              <mxPoint x="1140" y="445" />
+              <mxPoint x="1790" y="220" />
+              <mxPoint x="1790" y="220" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="flow_govt_to_supabase" edge="1" parent="1" source="ext_govt" target="supabase_box" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#9CA3AF;strokeDasharray=5 3;fontColor=#4B5563;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" value="&lt;b style=&quot;color: rgb(75, 85, 99); font-size: 12px;&quot;&gt;Periodic Data Ingestion&lt;br&gt;(Schemes &amp;amp; Policies)&lt;/b&gt;">
-          <mxGeometry relative="1" as="geometry">
+        <mxCell id="flow4" edge="1" parent="1" source="backend_boundary" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#DC2626;fontColor=#B91C1C;labelBackgroundColor=#FFFFFF;" target="ext_mappls" value="&lt;font style=&quot;font-size: 23px;&quot;&gt;&lt;b style=&quot;color: rgb(220, 38, 38);&quot;&gt;[Step 4a]&lt;/b&gt;&lt;br&gt;&lt;b style=&quot;&quot;&gt;Location&lt;/b&gt;&lt;/font&gt;">
+          <mxGeometry relative="1" x="-0.0213" y="30" as="geometry">
+            <mxPoint as="offset" />
             <Array as="points">
-              <mxPoint x="1410" y="870" />
-              <mxPoint x="180" y="870" />
+              <mxPoint x="1790.09" y="360" />
+              <mxPoint x="1790.09" y="360" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="flow5_resp" edge="1" parent="1" source="ext_gemini" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#2563EB;strokeDasharray=5 3;fontColor=#1D4ED8;" target="backend_boundary" value="&lt;b style=&quot;color: rgb(37, 99, 235); font-size: 12px;&quot;&gt;[Step 5b]&lt;/b&gt;&lt;br&gt;Market Research Analysis&lt;br&gt;&amp;amp; Insights">
-          <mxGeometry relative="1" y="12" as="geometry">
-            <mxPoint x="-5" y="20" as="offset" />
+        <mxCell id="flow4_resp" edge="1" parent="1" source="ext_mappls" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#DC2626;strokeDasharray=5 3;fontColor=#B91C1C;labelBackgroundColor=#FFFFFF;" target="backend_boundary" value="&lt;font style=&quot;font-size: 23px;&quot;&gt;&lt;b style=&quot;color: rgb(220, 38, 38);&quot;&gt;[Step 4b]&lt;/b&gt;&lt;br&gt;&lt;b style=&quot;&quot;&gt;Nearby Registered Businesses&lt;/b&gt;&lt;/font&gt;">
+          <mxGeometry relative="1" x="0.0213" y="30" as="geometry">
+            <mxPoint as="offset" />
             <Array as="points">
-              <mxPoint x="1140" y="495" />
-              <mxPoint x="1140" y="495" />
+              <mxPoint x="1790" y="390" />
+              <mxPoint x="1790" y="390" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="flow6" edge="1" parent="1" source="backend_boundary" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#059669;fontColor=#047857;" target="supabase_box" value="&lt;b style=&quot;color: rgb(5, 150, 105); font-size: 12px;&quot;&gt;[Step 6]&lt;br&gt;Business Profile &amp;amp; Results&lt;/b&gt;">
-          <mxGeometry relative="1" y="-20" as="geometry">
-            <mxPoint x="10" y="-12" as="offset" />
+        <mxCell id="flow5" edge="1" parent="1" source="backend_boundary" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#2563EB;fontColor=#1D4ED8;labelBackgroundColor=#FFFFFF;" target="ext_gemini" value="&lt;font style=&quot;font-size: 23px;&quot;&gt;&lt;b style=&quot;color: rgb(37, 99, 235);&quot;&gt;[Step 5a]&lt;/b&gt;&lt;br&gt;&lt;b style=&quot;&quot;&gt;Real-Time Web Search &amp;amp; Idea Analysis&lt;/b&gt;&lt;/font&gt;">
+          <mxGeometry relative="1" x="0.0112" y="30" as="geometry">
+            <mxPoint as="offset" />
             <Array as="points">
-              <mxPoint x="380" y="690" />
-              <mxPoint x="380" y="690" />
+              <mxPoint x="1790" y="590" />
+              <mxPoint x="1790" y="590" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="flow7" edge="1" parent="1" source="backend_boundary" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2.5;strokeColor=#0284C7;strokeDasharray=6 3;fontColor=#0369A1;" target="flutter_app" value="&lt;b style=&quot;color: rgb(3, 105, 161); font-size: 13px;&quot;&gt;[Step 7]&lt;br&gt;Final advisory response&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size: 11px;&quot;&gt;DPR PDF Downloads,&lt;br&gt;Map Overlays &amp;amp; Audio Advice&lt;/span&gt;">
-          <mxGeometry relative="1" y="18" as="geometry">
-            <mxPoint x="5" y="16" as="offset" />
+        <mxCell id="flow5_resp" edge="1" parent="1" source="ext_gemini" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#2563EB;strokeDasharray=5 3;fontColor=#1D4ED8;labelBackgroundColor=#FFFFFF;" target="backend_boundary" value="&lt;font style=&quot;font-size: 23px;&quot;&gt;&lt;b style=&quot;color: rgb(37, 99, 235);&quot;&gt;[Step 5b]&lt;/b&gt;&lt;br&gt;&lt;b style=&quot;&quot;&gt;Market Research Analysis &amp;amp; Insights&lt;/b&gt;&lt;/font&gt;">
+          <mxGeometry relative="1" x="0.0337" y="30" as="geometry">
+            <mxPoint x="-1" as="offset" />
             <Array as="points">
-              <mxPoint x="390" y="410" />
-              <mxPoint x="390" y="410" />
+              <mxPoint x="1790.08" y="620" />
+              <mxPoint x="1790.08" y="620" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow_govt_to_supabase" edge="1" parent="1" source="ext_govt" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#9CA3AF;strokeDasharray=5 3;fontColor=#4B5563;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;labelBackgroundColor=#FFFFFF;" target="supabase_box" value="&lt;b style=&quot;color: rgb(75, 85, 99);&quot;&gt;&lt;font style=&quot;font-size: 25px;&quot;&gt;Periodic Data Ingestion (Schemes &amp;amp; Policies)&lt;/font&gt;&lt;/b&gt;">
+          <mxGeometry relative="1" y="15" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="2210" y="930" />
+              <mxPoint x="285" y="930" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow6" edge="1" parent="1" source="backend_boundary" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#059669;fontColor=#047857;labelBackgroundColor=#FFFFFF;" target="supabase_box" value="&lt;font style=&quot;font-size: 24px;&quot;&gt;&lt;b style=&quot;color: rgb(5, 150, 105);&quot;&gt;[Step 6]&lt;/b&gt;&lt;br&gt;&lt;b style=&quot;&quot;&gt;Business Profile &amp;amp; Results&lt;/b&gt;&lt;/font&gt;">
+          <mxGeometry relative="1" x="-0.011" y="-40" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="735" y="700" />
+              <mxPoint x="735" y="700" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow7" edge="1" parent="1" source="backend_boundary" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2.5;strokeColor=#0284C7;strokeDasharray=6 3;fontColor=#0369A1;labelBackgroundColor=#FFFFFF;align=center;" target="flutter_app" value="&lt;div style=&quot;&quot;&gt;&lt;b style=&quot;font-size: 21px; background-color: light-dark(rgb(255, 255, 255), rgb(18, 18, 18)); color: rgb(3, 105, 161);&quot;&gt;[Step 7]&lt;/b&gt;&lt;/div&gt;&lt;font style=&quot;line-height: 140%;&quot;&gt;&lt;div&gt;&lt;b style=&quot;background-color: light-dark(rgb(255, 255, 255), rgb(18, 18, 18)); color: light-dark(rgb(3, 105, 161), rgb(89, 177, 225));&quot;&gt;&lt;font style=&quot;font-size: 23px; line-height: 140%;&quot;&gt;Final advisory response&lt;/font&gt;&lt;/b&gt;&lt;/div&gt;&lt;font style=&quot;line-height: 140%; font-size: 17px;&quot;&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: light-dark(rgb(255, 255, 255), rgb(18, 18, 18)); color: light-dark(rgb(3, 105, 161), rgb(89, 177, 225));&quot;&gt;DPR PDF Downloads,&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;color: light-dark(rgb(3, 105, 161), rgb(89, 177, 225)); background-color: light-dark(rgb(255, 255, 255), rgb(18, 18, 18));&quot;&gt;Map Overlays &amp;amp; Audio Advice&lt;/span&gt;&lt;/div&gt;&lt;/font&gt;&lt;/font&gt;">
+          <mxGeometry relative="1" x="0.0103" y="40" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="735" y="430" />
+              <mxPoint x="735" y="430" />
             </Array>
           </mxGeometry>
         </mxCell>
