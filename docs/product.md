@@ -109,11 +109,11 @@ decision-maker.
 
 The product follows a complete business lifecycle:
 
-> **DISCOVER → VALIDATE → DECIDE → START → OPERATE → ANALYZE → GROW**
+> **Understand → Discover → Validate → Finance → Plan → Start → Record → Identify → Discuss → Improve → Learn → Comply → Grow**
 
 The simplified presentation may be shown as:
 
-> **Discover → Validate → Start → Operate & Grow**
+> **Discover → Validate → Finance → Start → Record → Improve → Grow**
 
 The stages are connected rather than isolated.
 
@@ -914,55 +914,68 @@ through text and voice.
 
 ## 28. SIH MVP Scope
 
-The SIH MVP should prove the strongest part of the product rather than
-attempt the entire future vision.
+The SIH MVP covers the complete entrepreneur journey from discovery to
+operating and improving the business. It is not limited to the
+feasibility and planning stages.
+
+> **Critical note:** The digital logbook and continuous AI insights are
+> **in the MVP**, not post-MVP. Business growth and ongoing assistance
+> are part of the Minimum Viable Product.
 
 ### Must prove
 
-**Entrepreneur discovery** - lightweight onboarding; - AI interview; -
-entrepreneur profile; - business discovery for users without a fixed
-idea.
+**Entrepreneur discovery** — lightweight onboarding; AI interview;
+entrepreneur profile; business discovery for users without a fixed idea.
 
-**Business definition** - idea clarification; - narrowing; -
+**Business definition** — idea clarification; narrowing;
 entrepreneur confirmation.
 
-**Research** - hyper-local secondary research; - government-first source
-priority; - targeted research; - customer/competitor/supplier/retailer
-research; - primary-data collection; - evidence organization.
+**Research** — hyper-local secondary research; government-first source
+priority; targeted research; customer/competitor/supplier/retailer
+research; primary-data collection; evidence organization.
 
-**Primary research** - AI-generated in-app surveys; - manual
-field/interview entry; - response analysis.
+**Primary research** — AI-generated in-app surveys; manual
+field/interview entry; voice collection; response analysis.
 
-**Evidence intelligence** - primary vs secondary comparison; - conflict
-detection; - evidence quality; - traceability.
+**Evidence intelligence** — primary vs secondary comparison; conflict
+detection; evidence quality; traceability.
 
-**Business feasibility** - demand; - competition; - purchasing power; -
-pricing; - distribution; - risks; - SWOT; - evidence-based
-recommendation.
+**Business feasibility** — demand; competition; purchasing power;
+pricing; distribution; risks; SWOT; evidence-based recommendation.
 
-**Financial intelligence** - project-cost estimation; - government
-scheme routing; - loan calculation; - repayment analysis; -
-affordability analysis.
+**Financial intelligence** — project-cost estimation; government scheme
+routing (Micro Finance Scheme and Term Loan Scheme per PS 26091);
+EMI calculation; repayment analysis; affordability analysis against
+projected business cash flow.
 
-**Final output** - executive summary; - evidence; - reasons; - risks; -
-confidence; - unknowns; - recommended next steps; - interactive
-financial assumptions.
+**Detailed Project Report** — automated generation consolidating all
+research, financial, and scheme information into one structured document.
+
+**Digital Logbook (MVP)** — offline-first voice-enabled logbook;
+daily sales/expense recording; local storage with sync on reconnection.
+
+**Continuous AI Insights (MVP)** — deviation detection against planned
+performance; guided entrepreneur discussion to understand root causes;
+suggested actions; action outcome tracking.
+
+**Final output** — executive summary; evidence; reasons; risks;
+confidence; unknowns; recommended next steps; interactive financial
+assumptions.
 
 ------------------------------------------------------------------------
 
 ## 29. Post-MVP Scope
 
-These should influence future architecture but should not consume MVP
-development time unless required for the demonstration:
+These extend the MVP's continuous support with deeper knowledge and
+compliance capabilities:
 
--   digital voice logbook;
--   continuous AI business insights;
--   prediction-vs-reality analysis;
--   growth/expansion analysis;
--   private financing guidance;
--   guided ITR/tax assistance;
+-   business-specific knowledge layer (YouTube/podcast transcripts,
+    articles, blogs, research papers — summarised in preferred language
+    with actionable next steps);
+-   guided GST assistance;
+-   ITR and presumptive taxation guidance;
+-   annual business summaries from accumulated logbook records;
 -   customer education/acquisition tools;
--   business knowledge hub;
 -   broader multilingual knowledge capabilities.
 
 ------------------------------------------------------------------------
@@ -1074,28 +1087,227 @@ Any AI coding agent working on this repository must follow these rules:
 
 ------------------------------------------------------------------------
 
-## 34. Open Product Decisions
+## 34. Product Decisions
 
-These remain intentionally unresolved:
+The following decisions have been resolved. Items marked **IMPLEMENTATION
+DETAIL** are answered at the principle level here; the exact code or
+schema belongs in the referenced document.
 
-1.  Exact mandatory vs optional onboarding fields.
-2.  Exact caste/community fields, consent and privacy UX.
-3.  Exact business-definition confirmation UX.
-4.  How users branch/restart after receiving 3--5 business
-    opportunities.
-5.  Exact geographic radius logic by business type.
-6.  Which government data sources are programmatically accessible for
-    the MVP.
-7.  Exact evidence-ranking/confidence methodology.
-8.  How survey respondents are recruited and authenticated.
-9.  Whether/which respondent incentives are used.
-10. Exact deterministic financial formulas.
-11. Exact government-scheme rule representation and update process.
-12. Exact backend/database/authentication/hosting choices.
-13. Exact SIH demonstration language set.
-14. Exact fallback behavior when a preferred language is unsupported.
-15. Exact evidence retention/provenance policy.
-16. Minimum automated tests and evaluation cases for the SIH demo.
+### 1. Mandatory vs optional onboarding fields
+
+**RESOLVED.**
+
+Mandatory for all workflows: preferred language, location, available
+capital.
+
+Mandatory for business discovery and validation: occupation, skills,
+interests, preferred business type, preferred operating scale, target
+customers, practical constraints.
+
+Collected separately only when the scheme assistance workflow is
+entered: age, gender, income, social category, disability status,
+minority status, employment status.
+
+The interview is adaptive. Questions whose answers are already known
+are not repeated.
+
+### 2. Caste/community fields, consent and privacy UX
+
+**RESOLVED at principle level. Consent UX copy is an IMPLEMENTATION
+DETAIL (`docs/ux.md`).**
+
+Social category/caste is collected only when the user enters a scheme
+assistance workflow. It is not collected during general business
+discovery. Voice processing requires explicit user consent before any
+voice data is processed. Only information required for the selected
+workflow is collected.
+
+### 3. Business-definition confirmation UX
+
+**RESOLVED. See `docs/ux.md` §19.**
+
+The AI narrows the broad idea into a specific proposition covering
+model, scale, customer segment, and location. It presents the refined
+definition to the entrepreneur. The entrepreneur confirms or corrects
+it. Only after confirmation does full validation begin.
+
+### 4. How users branch/restart after receiving 3--5 business opportunities
+
+**RESOLVED.**
+
+Once the entrepreneur selects and confirms a business opportunity,
+switching to a different opportunity requires starting a new research
+project. The old research project and its evidence are preserved for
+reference and are never deleted. The entrepreneur can initiate a new
+research project from their business dashboard at any time.
+
+### 5. Geographic radius logic by business type
+
+**RESOLVED at principle level. Per-category values are an IMPLEMENTATION
+DETAIL (research engine).**
+
+A fixed radius is not used. The research scope is tiered by business
+category:
+
+-   Hyper-local (1--3 km): neighbourhood services, daily-need retail.
+-   Local (5--10 km): food processing, small manufacturing, personal
+    services.
+-   Regional (10--30 km): larger processing, distribution, aggregation
+    businesses.
+-   Sourcing-based: supplier geography is determined by material
+    availability and route cost rather than a fixed radius.
+
+The PS 26091 operational guideline of 10--15 km is the reference
+baseline. Exact per-category values must be defined in the research
+engine before implementation.
+
+### 6. Government data sources programmatically accessible for the MVP
+
+**RESOLVED.**
+
+Priority sources: Open Government Data Platform India (OGD), Census
+and official demographic data, MoSPI, Ministry of Social Justice and
+Empowerment, NSCFDC (where applicable), NABARD, Reserve Bank of
+India, JanSamarth, myScheme, MoMSME/MyMSME/CHAMPIONS, PM Vishwakarma.
+
+Access method: web search plus API where available, consistent with
+`docs/architecture.md` §11. Exact programmatic availability per source
+must be verified at implementation time.
+
+### 7. Evidence-ranking/confidence methodology
+
+**RESOLVED at principle level. Exact weights are an IMPLEMENTATION
+DETAIL (research engine).**
+
+Confidence is a 0--1.0 weighted score built from four factors:
+
+1.  **Source authority**: government official > trusted institutional >
+    general web.
+2.  **Recency**: information within 1 year receives full weight;
+    weight decreases for older data.
+3.  **Geographic fit**: village-level > district > state > national.
+4.  **Sample quality** (primary research only): accounts for sample
+    size, respondent relevance, and response consistency.
+
+Confidence is reduced when evidence conflicts, when sample sizes are
+small, or when geographic scope is mismatched. Exact factor weights
+must be documented before implementation.
+
+### 8. How survey respondents are recruited and authenticated
+
+**RESOLVED.**
+
+The entrepreneur recruits respondents through their own existing local
+network. The platform does not recruit respondents independently. No
+authentication of individual survey respondents is required. The
+entrepreneur is responsible for the quality of responses from their
+network. The system assesses survey quality (sample size, respondent
+relevance, consistency) and flags weak evidence accordingly.
+
+### 9. Respondent incentives
+
+**RESOLVED.**
+
+No platform-managed incentives in the MVP. The primary research model
+relies on the entrepreneur's existing local network. Incentives are a
+field deployment consideration outside the product's scope.
+
+### 10. Deterministic financial formulas
+
+**RESOLVED. Exact code belongs in the financial engine.**
+
+The financial engine calculates: project cost, entrepreneur
+contribution, financing requirement, loan amount, interest (reducing
+balance EMI), repayment period, installment amount, projected revenue,
+operating expenses, cash available for repayment, and repayment burden.
+
+PS 26091 scheme parameters (authoritative):
+
+-   **Micro Finance Scheme**: project cost ≤ ₹1.40 lakh → 90%
+    financing → maximum loan ₹1.25 lakh → 6.5% interest → 3-year
+    tenure + 3-month moratorium.
+-   **Term Loan Scheme**: project cost ₹1.40 lakh to ₹50 lakh → 90%
+    financing → maximum loan ₹45 lakh → 8% interest → 7-year tenure
+    + 6-month moratorium.
+
+Standard reducing-balance EMI formula applies throughout.
+
+### 11. Government scheme rule representation and update process
+
+**RESOLVED. Schema belongs in `docs/database.md`.**
+
+Scheme rules are stored as structured database records, not as LLM
+knowledge. Each record contains: scheme name, eligible project range,
+maximum financing, margin requirement, interest rate, repayment period,
+beneficiary conditions, required attributes, required documents,
+official source URL, effective date, and last verification date. Rules
+are updated when official conditions change. The system does not
+present outdated rules as current.
+
+### 12. Backend/database/authentication/hosting choices
+
+**RESOLVED. See `docs/architecture.md`.**
+
+Confirmed stack: Flutter (mobile client), FastAPI (backend API),
+Supabase (JWT auth + PostgreSQL + Storage), Google Gemini API (LLM),
+Bhashini API (speech and language), Mappls API (location and
+geospatial), Flutter AI Toolkit (conversational UI), Celery + Redis
+(background tasks), ReportLab (DPR PDF generation), Docker
+(containerisation), GitHub Actions (CI/CD).
+
+### 13. SIH demonstration language set
+
+**RESOLVED.**
+
+All 22 Bhashini scheduled languages are integrated dynamically via the
+Bhashini API. Language availability is determined at runtime by
+querying the Bhashini service for the user's selected language rather
+than hardcoding a fixed subset. The known trade-off is that ASR/TTS
+quality varies across languages on the platform; lower-quality
+languages may produce weaker results during the demo. English is the
+fallback when a selected language is unsupported or returns a
+low-confidence result.
+
+The 22 scheduled languages: Assamese, Bengali, Bodo, Dogri, Gujarati,
+Hindi, Kannada, Kashmiri, Konkani, Maithili, Malayalam, Manipuri,
+Marathi, Nepali, Odia, Punjabi, Sanskrit, Santali, Sindhi, Tamil,
+Telugu, Urdu.
+
+### 14. Fallback behavior when a preferred language is unsupported
+
+**RESOLVED.**
+
+If the user's selected language is not supported by the active Bhashini
+service, the system falls back to English silently at the API layer and
+notifies the user that their preferred language is temporarily
+unavailable. The application continues to function; no feature is
+blocked because of a language failure.
+
+### 15. Evidence retention/provenance policy
+
+**RESOLVED.**
+
+Evidence records are retained for the full life of the entrepreneur's
+account, regardless of the status of the associated business (active,
+paused, closed, or archived). Records are not deleted when a business
+is closed. Provenance fields (source URL, retrieval date, publication
+date, geography, claim, limitations, confidence) are preserved
+permanently and cannot be overwritten by later research.
+
+### 16. Minimum automated tests and evaluation cases for the SIH demo
+
+**RESOLVED. Full strategy in `docs/testing.md`.**
+
+Minimum passing bar for the demo:
+
+-   100% of financial engine unit tests pass (including PS 26091
+    scheme boundary tests at ₹1.40 lakh threshold).
+-   100% of scheme eligibility routing tests pass.
+-   100% of RLS ownership tests pass.
+-   Offline logbook entry and sync are verified end-to-end.
+-   Voice input parsing is verified for at least Hindi and English.
+-   Full research-to-recommendation pipeline integration test passes
+    with a representative entrepreneur scenario.
 
 ------------------------------------------------------------------------
 

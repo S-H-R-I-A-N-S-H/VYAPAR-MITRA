@@ -208,6 +208,42 @@ EMI = deterministic expected value
 
 Do not rely on Gemini to validate financial arithmetic.
 
+### Scheme Engine Tests (PS 26091)
+
+Test the Micro Finance Scheme and Term Loan Scheme thresholds precisely:
+
+```text
+Micro Finance Scheme:
+  project cost ≤ ₹1.40 lakh
+  financing = 90% of project cost
+  max loan = ₹1.25 lakh
+  interest rate = 6.5% beneficiary
+  tenure = 3 years + 3-month moratorium
+
+Term Loan Scheme:
+  project cost > ₹1.40 lakh and ≤ ₹50 lakh
+  financing = 90% of project cost
+  max loan = ₹45 lakh
+  interest rate = 8% beneficiary
+  tenure = 7 years + 6-month moratorium
+
+Boundary test: project cost = exactly ₹1.40 lakh → Micro Finance Scheme
+Boundary test: project cost = ₹1.40 lakh + ₹1 → Term Loan Scheme
+Boundary test: project cost exceeds ₹50 lakh → neither scheme eligible
+```
+
+Test repayment affordability separation from eligibility:
+
+```text
+Given:
+  projected monthly revenue and operating costs
+
+Expect:
+  cash available for repayment = revenue - costs
+  repayment burden correctly flagged when EMI > available cash
+  eligibility result is independent from affordability result
+```
+
 ---
 
 # 8. Financial Edge Cases

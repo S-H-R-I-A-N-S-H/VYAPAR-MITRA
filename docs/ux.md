@@ -148,7 +148,7 @@ Voice
 
 # 4. Core Product Journey
 
-The primary UX journey:
+The primary UX journey (full MVP):
 
 ```text
 Welcome
@@ -177,25 +177,31 @@ Financial planning
    ↓
 Government schemes
    ↓
+Detailed Project Report
+   ↓
 Recommendation
    ↓
 Next action
+   ↓
+Digital Logbook (voice/text, offline-first)
+   ↓
+Continuous AI Insights
+   ↓
+Deviation detection
+   ↓
+Guided discussion
+   ↓
+Action suggestions
+   ↓
+Improve & Grow
 ```
 
-Long-term:
+Post-MVP additions:
 
 ```text
-Start
- ↓
-Operate
- ↓
-Record
- ↓
-Analyze
- ↓
-Compare prediction vs reality
- ↓
-Grow
+Business knowledge layer
++
+GST / Tax compliance assistance
 ```
 
 ---
