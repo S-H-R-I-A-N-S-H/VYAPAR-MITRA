@@ -42,6 +42,8 @@ class ApiEndpoints {
   // Locality & Mappls Geospatial Intelligence
   static String get localityCompetitors => '$baseUrl/locality/competitors';
   static String discoverProjectCompetitors(String id) => '$baseUrl/research/projects/$id/discover-competitors';
+  static String get geospatialDistanceMatrix => '$baseUrl/geospatial/distance-matrix';
+  static String get geospatialSupplierFreightEvaluation => '$baseUrl/geospatial/supplier-freight-evaluation';
 
   // Opportunities & Business
   static String get discoverOpportunities => '$baseUrl/opportunities/discover';

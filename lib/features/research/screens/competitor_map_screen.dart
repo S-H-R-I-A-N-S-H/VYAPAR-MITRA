@@ -10,6 +10,7 @@ import '../../../shared/widgets/vyapar_top_app_bar.dart';
 import '../models/competitor_poi.dart';
 import '../providers/competitor_provider.dart';
 import '../widgets/hyperlocal_competitor_map.dart';
+import '../widgets/logistics_feasibility_card.dart';
 
 /// Screen displaying interactive Mappls hyperlocal competitor discovery.
 class CompetitorMapScreen extends ConsumerStatefulWidget {
@@ -224,6 +225,9 @@ class _CompetitorMapScreenState extends ConsumerState<CompetitorMapScreen> {
                       ),
                     );
                   }),
+                  const SizedBox(height: 20),
+                  const LogisticsFeasibilityCard(),
+                  const SizedBox(height: 20),
                 ],
               ),
             );

@@ -79,11 +79,29 @@ class AuthNotifier extends StateNotifier<AuthState> {
           phone: currentSession.user.phone,
         );
         return;
+      } else {
+        // Live Supabase is initialized but session is expired/null — clear stale cache
+        await _clearSessionFromStorage();
       }
-    } catch (_) {}
+    } catch (_) {
+      // Supabase is uninitialized (e.g. test environment / offline): restore from secure storage
+      try {
+        final cachedToken = await _secureStorage.read(key: _keyToken);
+        final cachedUserId = await _secureStorage.read(key: _keyUserId);
+        final cachedEmail = await _secureStorage.read(key: _keyEmail);
+        final cachedPhone = await _secureStorage.read(key: _keyPhone);
+        if (cachedToken != null && cachedToken.isNotEmpty && cachedUserId != null) {
+          state = AuthState.authenticated(
+            token: cachedToken,
+            userId: cachedUserId,
+            email: cachedEmail,
+            phone: cachedPhone,
+          );
+          return;
+        }
+      } catch (_) {}
+    }
 
-    // No valid live Supabase session — clear any stale cached token to prevent 401 errors
-    await _clearSessionFromStorage();
 
     // Listen for runtime auth changes (login, logout, token refresh)
     try {

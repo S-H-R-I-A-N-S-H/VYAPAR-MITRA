@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     # BHASHINI (Speech / Indian Language Layer)
     BHASHINI_API_KEY: Optional[str] = None
     BHASHINI_USER_ID: Optional[str] = None
+    BHASHINI_INFERENCE_KEY: Optional[str] = None
     BHASHINI_PIPELINE_ID: Optional[str] = None
 
     # Mappls (Maps / Geocoding Layer)

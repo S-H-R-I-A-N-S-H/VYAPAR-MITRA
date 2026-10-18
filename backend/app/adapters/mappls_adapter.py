@@ -240,3 +240,103 @@ class MapplsAdapter:
                 {"name": f"{category.title()} Enterprise Hub", "distance_km": 1.5, "category": category, "address": "Gram Panchayat Chowk"},
                 {"name": f"Rural {category.title()} Center", "distance_km": 3.2, "category": category, "address": "Bazar Peth"},
             ]
+
+    @staticmethod
+    def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        """Computes Great-Circle distance using Haversine formula."""
+        import math
+        r = 6371.0  # Earth's mean radius in km
+        phi1 = math.radians(lat1)
+        phi2 = math.radians(lat2)
+        delta_phi = math.radians(lat2 - lat1)
+        delta_lambda = math.radians(lon2 - lon1)
+        a = (
+            math.sin(delta_phi / 2.0) ** 2
+            + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2.0) ** 2
+        )
+        c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+        return r * c
+
+    async def get_distance_matrix(
+        self,
+        origin_lat: float,
+        origin_lon: float,
+        destinations: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """
+        Calculates driving distance (km) and duration (mins) from origin to multiple destinations.
+        Leverages Mappls REST API when live keys are available; falls back to deterministic
+        rural road circuity model (Haversine * 1.30 winding factor @ 32 km/h) if offline.
+        """
+        results: List[Dict[str, Any]] = []
+        if not destinations:
+            return results
+
+        token = await self._get_access_token() if self.is_live else None
+
+        for dest in destinations:
+            dest_id = dest.get("id", "")
+            dest_name = dest.get("name", "")
+            dest_lat = float(dest.get("latitude", 0.0))
+            dest_lon = float(dest.get("longitude", 0.0))
+
+            straight_km = self._haversine_km(origin_lat, origin_lon, dest_lat, dest_lon)
+            if straight_km < 0.05:
+                # Same location / zero distance
+                results.append({
+                    "destination_id": dest_id,
+                    "destination_name": dest_name,
+                    "distance_km": 0.0,
+                    "duration_minutes": 0,
+                    "is_real_mappls": bool(token),
+                })
+                continue
+
+            distance_km: Optional[float] = None
+            duration_mins: Optional[int] = None
+            is_real = False
+
+            if token:
+                try:
+                    async with httpx.AsyncClient(timeout=6.0) as client:
+                        # Mappls Atlas Distance API
+                        # coordinates format: lon1,lat1;lon2,lat2
+                        coords_param = f"{origin_lon},{origin_lat};{dest_lon},{dest_lat}"
+                        resp = await client.get(
+                            "https://atlas.mappls.com/api/places/distance/json",
+                            params={"coordinates": coords_param},
+                            headers={"Authorization": f"Bearer {token}"},
+                        )
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            routes = data.get("routes") or data.get("results", {}).get("routes", [])
+                            if routes and isinstance(routes, list):
+                                r_dist = float(routes[0].get("distance", 0.0))  # meters
+                                r_dur = float(routes[0].get("duration", 0.0))  # seconds
+                                distance_km = round(r_dist / 1000.0, 1)
+                                duration_mins = max(1, round(r_dur / 60.0))
+                                is_real = True
+                except Exception as e:
+                    logger.warning(
+                        f"Mappls distance API error for dest {dest_id}: {e}. Falling back to rural model."
+                    )
+
+            if distance_km is None or duration_mins is None:
+                # Deterministic rural road model:
+                # 1.30 winding factor accounts for non-linear rural village roads & canal bypasses
+                circuity_factor = 1.30
+                distance_km = round(straight_km * circuity_factor, 1)
+                # Average rural transit speed: 32 km/h (pickup tempo / tractor / rural state road)
+                duration_mins = max(1, round((distance_km / 32.0) * 60.0))
+                is_real = False
+
+            results.append({
+                "destination_id": dest_id,
+                "destination_name": dest_name,
+                "distance_km": distance_km,
+                "duration_minutes": duration_mins,
+                "is_real_mappls": is_real,
+            })
+
+        return results
+

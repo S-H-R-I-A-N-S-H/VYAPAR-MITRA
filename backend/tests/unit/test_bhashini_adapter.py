@@ -9,6 +9,7 @@ def mock_empty_settings():
     with patch("app.adapters.bhashini_adapter.settings") as mocked:
         mocked.BHASHINI_API_KEY = ""
         mocked.BHASHINI_USER_ID = ""
+        mocked.BHASHINI_INFERENCE_KEY = ""
         mocked.BHASHINI_PIPELINE_ID = ""
         yield mocked
 
@@ -18,6 +19,17 @@ def mock_live_settings():
     with patch("app.adapters.bhashini_adapter.settings") as mocked:
         mocked.BHASHINI_API_KEY = "test_bhashini_api_key"
         mocked.BHASHINI_USER_ID = "test_bhashini_user_id"
+        mocked.BHASHINI_INFERENCE_KEY = ""
+        mocked.BHASHINI_PIPELINE_ID = "64392f96daac500b55c543d0"
+        yield mocked
+
+
+@pytest.fixture
+def mock_inference_settings():
+    with patch("app.adapters.bhashini_adapter.settings") as mocked:
+        mocked.BHASHINI_API_KEY = ""
+        mocked.BHASHINI_USER_ID = ""
+        mocked.BHASHINI_INFERENCE_KEY = "test_inference_key_999"
         mocked.BHASHINI_PIPELINE_ID = "64392f96daac500b55c543d0"
         yield mocked
 
@@ -163,3 +175,102 @@ async def test_bhashini_live_failure_falls_back_to_sandbox(mock_live_settings):
         # Must degrade gracefully to sandbox output without raising uncaught exception
         transcription = await adapter.speech_to_text(b"some_audio_bytes", lang="hi")
         assert len(transcription) > 0
+
+
+@pytest.mark.asyncio
+async def test_bhashini_direct_inference_speech_to_text(mock_inference_settings):
+    adapter = BhashiniAdapter()
+    assert adapter.is_live is True
+    assert adapter.inference_key == "test_inference_key_999"
+
+    mock_compute_resp = MagicMock()
+    mock_compute_resp.status_code = 200
+    mock_compute_resp.json.return_value = {
+        "pipelineResponse": [
+            {
+                "taskType": "asr",
+                "output": [{"source": "मशीन खरीदने के लिए मुद्रा लोन चाहिए"}],
+            }
+        ]
+    }
+
+    with patch("httpx.AsyncClient") as MockClient:
+        client_instance = AsyncMock()
+        client_instance.__aenter__.return_value = client_instance
+        client_instance.post.return_value = mock_compute_resp
+        MockClient.return_value = client_instance
+
+        res = await adapter.speech_to_text(b"mock_audio_bytes", lang="hi")
+        assert res == "मशीन खरीदने के लिए मुद्रा लोन चाहिए"
+
+        # Verify it directly posted to Dhruva inference endpoint with Authorization header
+        assert client_instance.post.call_count == 1
+        call_args = client_instance.post.call_args
+        assert call_args[0][0] == adapter.INFERENCE_URL
+        assert call_args[1]["headers"]["Authorization"] == "test_inference_key_999"
+        assert call_args[1]["json"]["pipelineTasks"][0]["config"]["serviceId"] == adapter.DEFAULT_SERVICE_IDS["asr"]
+
+
+@pytest.mark.asyncio
+async def test_bhashini_direct_inference_translation(mock_inference_settings):
+    adapter = BhashiniAdapter()
+    assert adapter.is_live is True
+
+    mock_compute_resp = MagicMock()
+    mock_compute_resp.status_code = 200
+    mock_compute_resp.json.return_value = {
+        "pipelineResponse": [
+            {
+                "taskType": "translation",
+                "output": [{"target": "How much loan can I get for dairy farming?"}],
+            }
+        ]
+    }
+
+    with patch("httpx.AsyncClient") as MockClient:
+        client_instance = AsyncMock()
+        client_instance.__aenter__.return_value = client_instance
+        client_instance.post.return_value = mock_compute_resp
+        MockClient.return_value = client_instance
+
+        res = await adapter.translate("डेयरी फार्मिंग के लिए कितना लोन मिलेगा?", source_lang="hi", target_lang="en")
+        assert res == "How much loan can I get for dairy farming?"
+
+        assert client_instance.post.call_count == 1
+        call_args = client_instance.post.call_args
+        assert call_args[0][0] == adapter.INFERENCE_URL
+        assert call_args[1]["headers"]["Authorization"] == "test_inference_key_999"
+        assert call_args[1]["json"]["pipelineTasks"][0]["config"]["serviceId"] == adapter.DEFAULT_SERVICE_IDS["translation"]
+
+
+@pytest.mark.asyncio
+async def test_bhashini_direct_inference_text_to_speech(mock_inference_settings):
+    adapter = BhashiniAdapter()
+    assert adapter.is_live is True
+
+    mock_audio_b64 = base64.b64encode(b"WAV_DIRECT_INFERENCE_AUDIO").decode("utf-8")
+    mock_compute_resp = MagicMock()
+    mock_compute_resp.status_code = 200
+    mock_compute_resp.json.return_value = {
+        "pipelineResponse": [
+            {
+                "taskType": "tts",
+                "audio": [{"audioContent": mock_audio_b64}],
+            }
+        ]
+    }
+
+    with patch("httpx.AsyncClient") as MockClient:
+        client_instance = AsyncMock()
+        client_instance.__aenter__.return_value = client_instance
+        client_instance.post.return_value = mock_compute_resp
+        MockClient.return_value = client_instance
+
+        audio_res = await adapter.text_to_speech("आपका आवेदन स्वीकार कर लिया गया है।", lang="hi")
+        assert audio_res == mock_audio_b64
+
+        assert client_instance.post.call_count == 1
+        call_args = client_instance.post.call_args
+        assert call_args[0][0] == adapter.INFERENCE_URL
+        assert call_args[1]["headers"]["Authorization"] == "test_inference_key_999"
+        assert call_args[1]["json"]["pipelineTasks"][0]["config"]["serviceId"] == adapter.DEFAULT_SERVICE_IDS["tts"]

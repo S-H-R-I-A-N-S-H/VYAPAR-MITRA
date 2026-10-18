@@ -4,6 +4,7 @@ from app.api.v1.endpoints import (
     evidence,
     feasibility,
     finance,
+    geospatial,
     health,
     interview,
     opportunities,
@@ -30,3 +31,5 @@ api_v1_router.include_router(surveys.router, tags=["Surveys"])
 api_v1_router.include_router(finance.router, prefix="/finance", tags=["Finance"])
 api_v1_router.include_router(schemes.router, prefix="/schemes", tags=["Schemes"])
 api_v1_router.include_router(evidence.router, prefix="/evidence", tags=["Evidence"])
+api_v1_router.include_router(geospatial.router, prefix="/geospatial", tags=["Geospatial Intelligence"])
+

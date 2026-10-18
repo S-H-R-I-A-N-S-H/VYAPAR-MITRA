@@ -43,12 +43,20 @@ class BhashiniAdapter:
     """
 
     CONFIG_URL = "https://meity-auth.ulca.ai/ulca/apis/v0/model/getModelsPipeline"
+    INFERENCE_URL = "https://dhruva-api.bhashini.gov.in/services/inference/pipeline"
+
+    DEFAULT_SERVICE_IDS: Dict[str, str] = {
+        "asr": "bhashini/ai4bharat/conformer-multilingual-asr",
+        "translation": "ai4bharat/indictrans-v2-all-gpu--t4",
+        "tts": "Bhashini/IITM/TTS",
+    }
 
     def __init__(self):
         self.api_key = (settings.BHASHINI_API_KEY or "").strip()
         self.user_id = (settings.BHASHINI_USER_ID or "").strip()
+        self.inference_key = (settings.BHASHINI_INFERENCE_KEY or "").strip()
         self.pipeline_id = (settings.BHASHINI_PIPELINE_ID or "64392f96daac500b55c543d0").strip()
-        self.is_live = bool(self.api_key and self.user_id)
+        self.is_live = bool(self.inference_key or (self.api_key and self.user_id))
         # Cache pipeline endpoints & service IDs: {cache_key: (endpoint_url, auth_token, service_id)}
         self._pipeline_cache: Dict[str, Tuple[str, str, str]] = {}
 
@@ -57,6 +65,7 @@ class BhashiniAdapter:
     ) -> Optional[Tuple[str, str, str]]:
         """
         Queries ULCA getModelsPipeline to retrieve the inference endpoint, auth token, and service ID.
+        Falls back to direct Dhruva compute endpoint with BHASHINI_INFERENCE_KEY if configured.
         """
         if not self.is_live:
             return None
@@ -65,58 +74,68 @@ class BhashiniAdapter:
         if cache_key in self._pipeline_cache:
             return self._pipeline_cache[cache_key]
 
-        task_config: Dict[str, Any] = {"language": {"sourceLanguage": source_lang}}
-        if target_lang:
-            task_config["language"]["targetLanguage"] = target_lang
+        # 1. Try dynamic pipeline negotiation if api_key and user_id are configured
+        if self.api_key and self.user_id:
+            task_config: Dict[str, Any] = {"language": {"sourceLanguage": source_lang}}
+            if target_lang:
+                task_config["language"]["targetLanguage"] = target_lang
 
-        payload = {
-            "pipelineTasks": [
-                {
-                    "taskType": task_type,
-                    "config": task_config,
-                }
-            ],
-            "pipelineRequestConfig": {
-                "pipelineId": self.pipeline_id,
-            },
-        }
+            payload = {
+                "pipelineTasks": [
+                    {
+                        "taskType": task_type,
+                        "config": task_config,
+                    }
+                ],
+                "pipelineRequestConfig": {
+                    "pipelineId": self.pipeline_id,
+                },
+            }
 
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.post(
-                    self.CONFIG_URL,
-                    json=payload,
-                    headers={
-                        "userID": self.user_id,
-                        "ulcaApiKey": self.api_key,
-                        "Content-Type": "application/json",
-                    },
-                )
-                if resp.status_code == 200:
-                    data = resp.json()
-                    configs = data.get("pipelineResponseConfig", [])
-                    service_id = ""
-                    for c in configs:
-                        if c.get("taskType") == task_type:
-                            sub_configs = c.get("config", [])
-                            if sub_configs:
-                                service_id = sub_configs[0].get("serviceId", "")
-                                break
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    resp = await client.post(
+                        self.CONFIG_URL,
+                        json=payload,
+                        headers={
+                            "userID": self.user_id,
+                            "ulcaApiKey": self.api_key,
+                            "Content-Type": "application/json",
+                        },
+                    )
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        configs = data.get("pipelineResponseConfig", [])
+                        service_id = ""
+                        for c in configs:
+                            if c.get("taskType") == task_type:
+                                sub_configs = c.get("config", [])
+                                if sub_configs:
+                                    service_id = sub_configs[0].get("serviceId", "")
+                                    break
 
-                    endpoint_meta = data.get("pipelineInferenceAPIEndPoint", {})
-                    endpoint_url = endpoint_meta.get("endpoint") or endpoint_meta.get("callbackUrl", "")
-                    auth_key = endpoint_meta.get("inferenceApiKey", {}).get("value", "")
+                        endpoint_meta = data.get("pipelineInferenceAPIEndPoint", {})
+                        endpoint_url = endpoint_meta.get("endpoint") or endpoint_meta.get("callbackUrl", "")
+                        auth_key = endpoint_meta.get("inferenceApiKey", {}).get("value", "") or self.inference_key
 
-                    if endpoint_url and auth_key and service_id:
-                        result = (endpoint_url, auth_key, service_id)
-                        self._pipeline_cache[cache_key] = result
-                        return result
+                        if endpoint_url and auth_key and service_id:
+                            result = (endpoint_url, auth_key, service_id)
+                            self._pipeline_cache[cache_key] = result
+                            return result
+                        else:
+                            logger.warning(f"Incomplete pipeline config response from Bhashini: {data}")
                     else:
-                        logger.warning(f"Incomplete pipeline config response from Bhashini: {data}")
-                else:
-                    logger.warning(f"Bhashini pipeline config returned HTTP {resp.status_code}: {resp.text}")
-        except Exception as e:
-            logger.warning(f"Bhashini pipeline config error: {e}")
+                        logger.warning(f"Bhashini pipeline config returned HTTP {resp.status_code}: {resp.text}")
+            except Exception as e:
+                logger.warning(f"Bhashini pipeline config error: {e}")
+
+        # 2. Fallback to direct Dhruva compute endpoint with official service IDs
+        if self.inference_key:
+            default_service_id = self.DEFAULT_SERVICE_IDS.get(task_type, "")
+            if default_service_id:
+                result = (self.INFERENCE_URL, self.inference_key, default_service_id)
+                self._pipeline_cache[cache_key] = result
+                return result
 
         return None
 
