@@ -23,6 +23,13 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.12"]
+    env:
+      ENVIRONMENT: "development"
+      DEV_ALLOW_ANONYMOUS: "false"
+      SUPABASE_JWT_SECRET: "ci-test-supabase-jwt-secret-minimum-32-chars-long"
+      GEMINI_API_KEY: "mock-gemini-key-for-ci"
+      GEMINI_MODEL: "gemini-3.5-flash-lite"
+      GEMINI_FALLBACK_MODELS: "gemini-flash-latest,gemini-3.1-flash-lite,gemini-3.6-flash"
 
     steps:
       - name: Checkout Repository
