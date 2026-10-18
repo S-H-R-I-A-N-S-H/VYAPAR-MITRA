@@ -417,7 +417,8 @@ Open `.env` in your editor and configure:
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | - | Service role key for backend elevated operations |
 | `SUPABASE_JWT_SECRET` | Yes | - | Secret key used to verify Supabase JWT auth tokens |
 | `GEMINI_API_KEY` | Yes | - | Google Gemini API key for conversational AI |
-| `GEMINI_MODEL` | No | `gemini-2.0-flash` | Gemini model variant |
+| `GEMINI_MODEL` | No | `gemini-3.5-flash-lite` | Gemini model variant |
+| `GEMINI_FALLBACK_MODELS` | No | `gemini-flash-latest,gemini-3.1-flash-lite,gemini-3.6-flash` | Comma-separated fallback models |
 | `BHASHINI_API_KEY` | No | *Sandbox Fallback* | Bhashini AI credentials (falls back to mock if blank) |
 | `MAPPLS_CLIENT_ID` | No | *Sandbox Fallback* | MapmyIndia credentials (falls back to mock if blank) |
 
